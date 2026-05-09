@@ -4,14 +4,12 @@ const User = require('../models/userModels');
 const sendEmail = require('../utils/emailService');
 
 
-
-
 // Register a new visitor
 // POST /api/visitors
 // Public (visitor can pre-register themselves)
 exports.registerVisitor = async (req, res) => {
     try {
-        const { name, email, phone, purpose, company, hostId, visitDate, visitTime } = req.body;
+        const { name, email, phone, purpose, company, hostId, visitDate, visitTime, notes } = req.body;
 
         // validate required fields
         if (!name || !email || !phone || !purpose || !hostId || !visitDate || !visitTime) {
@@ -20,7 +18,7 @@ exports.registerVisitor = async (req, res) => {
             });
         }
 
-        // Check if the host (user) actually exists
+        // verify that the host employee exists and has the correct role (host or admin)
         const hostUser = await User.findById(hostId);
 
         if (!hostUser || !(hostUser.role === 'host' || hostUser.role === 'admin')) {
@@ -29,7 +27,7 @@ exports.registerVisitor = async (req, res) => {
             });
         } 
 
-        // Get photo filename if uploaded
+        // Get photo filename if uploaded ( set by multer middleware )
         const photo = req.file ? req.file.filename : '';
         
         // save the visitor to the database
@@ -39,9 +37,10 @@ exports.registerVisitor = async (req, res) => {
             phone,
             company,
             purpose,
-            photo,
+            photoUrl: photo,
             hostId,
             visitDate,
+            visitTime,
             registerBy: res.user?._id || null,
             notes: notes || '',
         });
@@ -49,11 +48,11 @@ exports.registerVisitor = async (req, res) => {
         // We create an appointment (starts as pending - until host/admin approves it)
         const newAppointment = await Appointment.create({
             visitorId: newVisitor._id, // Link to the visitor
-            hostId, // The host they selected
-            visitDate: new Date(visitDate), // Convert to Date object
-            visitTime,
+            hostId: hostId, // The host they selected
+            visitDate: new Date(visitDate),
+            visitTime: visitTime,
             status: 'pending', // Starts as pending until Admin/Host approves
-            purpose,
+            purpose: purpose,
             notes: notes || '',
         });
 
@@ -63,20 +62,21 @@ exports.registerVisitor = async (req, res) => {
                 email: newVisitor.email,
                 subject: 'Visitor Registration Successful',
                 message: `
-                Hello ${newVisitor.name},\n\nYou have successfully registered as a visitor.`,
+                Hello ${newVisitor.name},\n\nYou have completed your registration.`,
                 html: `
                 <div style="font-family: Arial, sans-serif; color: #333;">
                     <h2 style="color: #2563eb;">Registration Successful!</h2>
                     <p>Hi <b>${newVisitor.name}</b>,</p>
-                    <p>Your visitor profile has been successfully created in our system.</p>
-                    <p>Company: ${newVisitor.company}</p>
+                    <p>Your personal details</p>
                     <p>${newVisitor.email}</p>
                     <p>${newVisitor.phone}</p>
+                    <p>And Your appointment is pending to approval. Please wait for the approval email.</p>
+
                 </div> `
             });    
 
-        } catch (error) {
-            console.log('Email faild but visitor was saved:', error.message);
+        } catch (emailError) {
+            console.log('Email failed but visitor was saved:', emailError.message);
         }
 
         // Return BOTH the visitor and the appointment data

@@ -17,14 +17,12 @@ const storage = multer.diskStorage({
 // File filter configuration
 // create a filter so people can't upload PDFs or other files (upload only images)
 const fileFilter = (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|webp/; // allowed file types images only
 
-    const isValid = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-
-    if (!isValid) {
+    if (file.mimetype.startsWith('image/')) {
         cb(null, true); // accept the file
+        
     } else {
-        cb(new Error('Only image files (jpeg, jpg, png, webp) are allowed'), false); // reject the file  
+        cb(new Error('Only image files are allowed'), false); // reject the file
     }
 };
 

@@ -72,12 +72,13 @@ const RegisterVisitor = () => {
                 data.append(key, formData[key]);
             });
 
+            // put the photo inside the envelope
+            if (photo) {
+                data.append('photo', photo);
+            }
+
             // change the header format to data from formData
-            const res = await api.post('/visitors', data, {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                },
-            });
+            const res = await api.post('/visitors', data);
 
 
             // if backend sends success, show green popup

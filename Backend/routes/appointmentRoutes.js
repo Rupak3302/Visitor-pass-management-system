@@ -2,10 +2,12 @@ const express = require('express');
 const router = express.Router();
 
 const { 
-    scheduleAppointment, 
-    getAppointments, 
+    // scheduleAppointment,
+    // getAppointments,
+    getMyAppointments,
+    getAppointmentById, 
     updateAppointmentStatus,
-    downloadBadge
+    // downloadBadge
 } = require('../controllers/appoinmentController');
 
 
@@ -17,20 +19,36 @@ const {
 
 // Route: POST /api/appointments
 // Only Admin and Host can create invites
-router.post(
-    '/',
-    protect,
-    authorizeRoles('admin', 'host'),
-    scheduleAppointment
-);
+// router.post(
+//     '/',
+//     protect,
+//     authorizeRoles('admin', 'host'),
+//     scheduleAppointment
+// );
+
+// Route: GET /api/appointments
+// router.get(
+//     '/',
+//     protect,
+//     authorizeRoles('admin', 'host'),
+//     getAppointments
+// );
 
 // Route: GET /api/appointments
 // Everyone logged in can view, but the controller filters based on role
 router.get(
     '/',
     protect,
-    authorizeRoles('admin', 'security', 'host'),
-    getAppointments
+    authorizeRoles('admin', 'host'),
+    getMyAppointments
+);
+
+// Route: GET /api/appointments/:id
+router.get(
+    '/:id',
+    protect,
+    authorizeRoles('admin', 'host'),
+    getAppointmentById
 );
 
 // Route: PUT /api/appointments/:id/status
@@ -47,8 +65,8 @@ router.put(
 router.get(
     '/:id/badge',
     protect,
-    authorizeRoles('admin', 'security', 'host'),
-    downloadBadge
+    authorizeRoles('admin', 'host'),
+    // downloadBadge
 );
 
 module.exports = router;

@@ -8,7 +8,7 @@ const connectDB = require('./config/db'); // our MongoDB connection function
 // Import the route files
 const userRoutes = require('./routes/userRoutes'); // user-related routes
 const visitorRoutes = require('./routes/visitorRoutes'); // visitor-related routes
-// const appointmentRoutes = require('./routes/appointmentRoutes'); // appointment-related routes
+const appointmentRoutes = require('./routes/appointmentRoutes'); // appointment-related routes
 // const checkLogsRoutes = require('./routes/checkLogsRoutes'); // check logs-related 
 const path = require('path');
 const { config } = require('dotenv');
@@ -34,7 +34,7 @@ app.use('/api/user', userRoutes);
 // Use the visitor routes
 app.use('/api/visitors', visitorRoutes);
 // Use the appointment routes
-// app.use('/api/appointments', appointmentRoutes);
+app.use('/api/appointments', appointmentRoutes);
 // Use the check logs routes
 // app.use('/api/checklogs', checkLogsRoutes);
 //allow to view the image

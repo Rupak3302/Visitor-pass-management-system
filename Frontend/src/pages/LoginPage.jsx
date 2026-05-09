@@ -51,6 +51,7 @@ const LoginPage = () => {
                         required
                         className='w-full py-3 px-4 transition border rounded-xl border-slate-200'
                         placeholder="admin@test.com"
+                        autoComplete="email"
                         />
                     </div>
 
@@ -65,6 +66,7 @@ const LoginPage = () => {
                             required
                             className='w-full py-3 pl-4 pr-12 transition border rounded-xl border-slate-200'
                             placeholder="Password"
+                            autoComplete="current-password"
                             />
 
                             {/* add the show password button at the right side */}
