@@ -6,18 +6,37 @@ const checkLogSchema = new mongoose.Schema({
         ref: 'Pass',
         required: true
     },
-    scannedBy: {
+    visitorId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Visitor',
+        required: true
+    },
+    appointmentId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Appointment',
+        required: true
+    },
+    hostId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
         required: true
     },
+    scannedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User', // the security who scanned the visitor
+        required: true
+    },
     checkInTime: {
         type: Date,
-        default: Date.now // automatically logs the exact moment it was scanned
+        default: Date.now
     },
     checkOutTime: {
         type: Date,
-        default: null // checkOutTime will be null until the visitor checks out, then it will be updated with the actual time
+    },
+    status: {
+        type: String,
+        enum: ['Inside', 'Inactive'], // Inside = checked_in, Inactive = checked_out
+        default: 'Inside'
     }
 }, {
     timestamps: true

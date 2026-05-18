@@ -18,7 +18,7 @@ const LandingPage = () => {
 
                 {/* Navigation link area */}
                 <div className='flex gap-4'>
-                    <Link to="/register-visitor" className='px-4 py-2 text-sm font-medium text-slate-600 hover:text-blue-600 transition'>
+                    <Link to="/register-visitor" className='px-5 py-2 text-sm font-bold text-blue-500 border border-blue-500 rounded-xl hover:bg-blue-200 transition shadow-md'>
                         Pre-Register Visitor
                     </Link>
                     {/* This button will take the users login page*/}
@@ -35,7 +35,7 @@ const LandingPage = () => {
                 <h1 className='text-5xl font-extrabold tracking-tight text-slate-900 sm:text-6xl mb-6'>
                     Modern Visitor Pass management System <br />
                     <span className='text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600'>
-                        For Sesure Facilities.
+                        For Secure Facilities.
                     </span>
                 </h1>
 

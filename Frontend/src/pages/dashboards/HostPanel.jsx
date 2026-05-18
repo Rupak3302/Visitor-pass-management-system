@@ -136,7 +136,8 @@
 import { useState, useEffect } from "react";
 import { CheckCircle, XCircle, Clock, Calendar, User, Briefcase, Search, Mail, Phone, Info } from "lucide-react";
 import toast from "react-hot-toast";
-import api from "../../services/api";
+import { getAppointments, updateAppointmentStatus} from "../../services/appointmentApi";
+// import Navbar from "../../components/Navbar";
 
 const HostPanel = () => {
   const [appointments, setAppointments] = useState([]);
@@ -147,14 +148,17 @@ const HostPanel = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
 
-  // Fetch ALL appointments for this host (not just pending)
+  // Fetch data from API with search and filter parameters
   const fetchAppointments = async () => {
     try {
-      // Removing the ?status=pending query gets all of them!
-      const res = await api.get('/appointments');
-      const data = res.data.appointments || res.data;
-      setAppointments(data);
+      // Pass the search and status filter directly from the service api 
+      const data = await getAppointments(searchTerm, statusFilter);
+
+      const appointmentArray = data.appointments || data; // Handle both { appointments: [...] } and [...] responses
+      setAppointments(appointmentArray);
+
     } catch (error) {
+      console.error('Failed to fetch appointments', error);
       toast.error("Failed to load your appointments");
     } finally {
       setLoading(false);
@@ -163,31 +167,33 @@ const HostPanel = () => {
 
   useEffect(() => {
     fetchAppointments();
-  }, []);
+  }, [searchTerm, statusFilter]);
 
   const handleStatusUpdate = async (id, newStatus) => {
     let rejectionReason = "";
 
     // If the host is rejecting, ask then fer a reason
     if (newStatus === 'rejected') {
-      const reason = Window.prompt("Please provide a reason for rejection:");
+      const reason = window.prompt("Please provide a reason for rejection:");
 
       // If they click "Cancel" or leave it blank, then proceed with out the rejection
       if ( reason === null ) return; 
       rejectionReason = reason;
     }
+
     setProcessingId(id);
     try {
-      const res = await api.put(`/appointments/${id}/status`, { 
+      // pass the id and the data object from the service api file
+      const res = await updateAppointmentStatus(id, { 
         status: newStatus,
         rejectionReason: rejectionReason
       });
       
-      toast.success(res.data.message || `Visit ${newStatus} successfully!`);
+      toast.success(res.message || `Visit ${newStatus} successfully!`);
       
       // Instantly update the table without reloading the page
       setAppointments(prev => 
-        prev.map(app => app._id === id ? { ...app, status: newStatus } : app)
+        prev.map(app => app._id === id ? { ...app, status: newStatus, rejectionReason: rejectionReason } : app)
       );
     } catch (error) {
       toast.error(error.response?.data?.message || `Failed to update status`);
@@ -196,9 +202,7 @@ const HostPanel = () => {
     }
   };
 
-  // --- DERIVED DATA (Searching & Filtering) ---
-  
-  // 1. Calculate Counts for the Summary Cards
+  // Calculate Counts for the Summary Cards
   const counts = {
     total: appointments.length,
     pending: appointments.filter(a => a.status === 'pending').length,
@@ -206,25 +210,6 @@ const HostPanel = () => {
     rejected: appointments.filter(a => a.status === 'rejected').length,
     completed: appointments.filter(a => a.status === 'completed').length,
   };
-
-  // 2. Filter the table data based on Search Term AND Status Dropdown
-  const filteredAppointments = appointments.filter(app => {
-
-    // Check Status
-    const matchesStatus = statusFilter === "All" || app.status === statusFilter.toLowerCase();
-
-    // Check Search by (Name, Email, or Phone)
-    const searchLower = searchTerm.toLowerCase();
-    const vName = app.visitorId?.name?.toLowerCase() || "";
-    const vEmail = app.visitorId?.email?.toLowerCase() || "";
-    const vPhone = app.visitorId?.phone?.toLowerCase() || "";
-    
-    const matchesSearch = vName.includes(searchLower) || 
-                          vEmail.includes(searchLower) || 
-                          vPhone.includes(searchLower);
-
-    return matchesStatus && matchesSearch;
-  });
 
   // Helper function to render colorful status badges
   const getStatusBadge = (status) => {
@@ -235,10 +220,6 @@ const HostPanel = () => {
       default: return <span className="bg-amber-100 text-amber-700 font-bold px-3 py-1 rounded-full text-xs animate-pulse">Pending</span>;
     }
   };
-
-  if (loading) {
-    return <div className="p-8 text-center text-slate-500 font-medium animate-pulse">Loading your dashboard...</div>;
-  }
 
   return (
     <div className="space-y-6 mt-6">
@@ -297,39 +278,41 @@ const HostPanel = () => {
             className="bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2 cursor-pointer font-medium outline-none"
           >
             <option value="All">All Status</option>
-            <option value="Pending">Pending</option>
-            <option value="Approved">Approved</option>
-            <option value="Rejected">Rejected</option>
-            <option value="Completed">Completed</option>
+            <option value="pending">Pending</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+            <option value="completed">Completed</option>
           </select>
         </div>
       </div>
 
-      {/* --- DATA TABLE --- */}
+      {/* DATA TABLE */}
       <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-        {filteredAppointments.length === 0 ? (
-          <div className="p-12 text-center">
+        {loading && appointments.length === 0 ? (
+          <div className="p-12 text-center text-slate-500 font-medium animate-pulse"> Loading your dashboard...</div>
+        ) : appointments.length === 0 ? (
+          <div className="p-12 text-center"> 
             <Clock className="w-12 h-12 text-slate-300 mx-auto mb-4" />
             <h3 className="text-lg font-bold text-slate-700">No records found</h3>
             <p className="text-slate-500">Try adjusting your search or filters.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500 font-bold">
-                  <th className="p-4">Visitor Details</th>
-                  <th className="p-4">Purpose</th>
-                  <th className="p-4">Date & Time</th>
-                  <th className="p-4">Status</th>
-                  <th className="p-4 text-right">Actions</th>
+          <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-320px)] relative bg-white rounded-b-xl scrollbar-hover-only">
+            <table className="w-full text-left text-sm text-slate-600 border-collapse">
+              <thead className="bg-slate-50 text-xs border-b border-slate-200 font-bold tracking-wider uppercase text-slate-400 sticky top-0 z-10 shadow-sm">
+                <tr>
+                  <th className="px-6 py-4 font-medium">Visitor Details</th>
+                  <th className="px-6 py-4 font-medium">Purpose Details</th>
+                  <th className="px-6 py-4 font-medium">Date & Time</th>
+                  <th className="px-6 py-4 font-medium">Status</th>
+                  <th className="px-6 py-4 font-medium text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filteredAppointments.map((app) => (
+                {appointments.map((app) => (
                   <tr key={app._id} className="hover:bg-slate-50 transition">
                     
-                    {/* Visitor Column (Now includes Email & Phone) */}
+                    {/* Visitor Column (includes Email & Phone) */}
                     <td className="p-4">
                       <div className="flex items-center gap-3">
                         {app.visitorId?.photoUrl ? (
@@ -342,7 +325,6 @@ const HostPanel = () => {
                         <div>
                           <p className="font-bold text-slate-800">{app.visitorId?.name || 'Unknown Visitor'}</p>
                           <div className="text-xs text-slate-500 space-y-0.5 mt-1">
-                             <p className="flex items-center gap-1"><Briefcase className="w-3 h-3"/> {app.visitorId?.company || 'N/A'}</p>
                              <p className="flex items-center gap-1"><Mail className="w-3 h-3"/> {app.visitorId?.email}</p>
                              <p className="flex items-center gap-1"><Phone className="w-3 h-3"/> {app.visitorId?.phone}</p>
                           </div>
@@ -350,11 +332,17 @@ const HostPanel = () => {
                       </div>
                     </td>
 
-                    {/* Purpose Column */}
+                    {/* Purpose Column (include Purpose, Company & Notes)*/}
                     <td className="p-4">
                       <span className="bg-blue-50 text-blue-700 font-semibold text-xs px-2.5 py-1 rounded-md">
-                        {app.purpose || 'Meeting'}
+                        {app.purpose}
                       </span>
+                      {app.visitorId?.company && (
+                        <p className="flex items-center gap-1 text-sx font-semibold text-slate-600 mt-2">
+                          <Briefcase className="w-3 h-3 text-slate-400" />
+                          {app.visitorId.company}
+                        </p>
+                      )}
                       {app.notes && (
                         <p className="text-xs text-slate-500 mt-2 max-w-[150px] truncate" title={app.notes}>
                           "{app.notes}"
@@ -370,11 +358,11 @@ const HostPanel = () => {
                       </p>
                       <p className="text-sm text-slate-500 flex items-center gap-1 mt-0.5">
                         <Clock className="w-4 h-4 text-slate-400" />
-                        {app.visitTime}
+                        {new Date (`2000-01-01T${app.visitTime}:00`).toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit', hour12: true})}
                       </p>
                     </td>
 
-                    {/* NEW Status Column */}
+                    {/* Status Column (include rejection reason)*/}
                     <td className="p-4">
                       {getStatusBadge(app.status)}
                       {/* Display the rejection reason if it exists! */}

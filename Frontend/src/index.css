@@ -2,3 +2,31 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer utilities {
+  /* Makes the scrollbar super thin */
+  .scrollbar-hover-only::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  
+  /* Makes the background track completely transparent */
+  .scrollbar-hover-only::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  /* Makes the scrollbar thumb (the part you drag) invisible by default! */
+  .scrollbar-hover-only::-webkit-scrollbar-thumb {
+    background-color: transparent; 
+    border-radius: 20px;
+  }
+  
+  /* THE MAGIC: Only show the grey scrollbar when the user hovers over the table */
+  .scrollbar-hover-only:hover::-webkit-scrollbar-thumb {
+    background-color: #cbd5e1; /* Tailwind slate-300 */
+  }
+  
+  /* Make it slightly darker when they actually click/drag it */
+  .scrollbar-hover-only::-webkit-scrollbar-thumb:hover {
+    background-color: #94a3b8; /* Tailwind slate-400 */
+  }
+}

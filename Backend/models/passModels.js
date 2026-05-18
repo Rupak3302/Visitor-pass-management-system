@@ -6,18 +6,41 @@ const passSchema = new mongoose.Schema({
         ref: 'Appointment',
         required: true
     },
+    visitorId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Visitor',
+        required: true
+    },
+    hostId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true
+    },
     qrCodeData: {
         type: String,
-        required: true // The unique string hidden inside the QR code image
+        required: true // I used base64 image string QR code which will store here
     },
-    status: {
-        type: String,
-        enum: ['active', 'expired', 'revoked'],
-        default: 'active'
+    passCode: {
+        type: String, // A unique 6-digit text code as a backup if the Qr code is won't scan
+        required: true,
+        unique: true
+    },
+    validFrom: {
+        type: Date,
+        required: true
     },
     validUntil: {
         type: Date,
-        // required: true
+        required: true
+    },
+    isActive: {
+        type: Boolean,
+        default: true // default true if expiry or after check-out false 
+    },
+    status: {
+        type: String,
+        enum: ['active', 'expired', 'inactive'],
+        default: 'active'
     }
 }, {
     timestamps: true

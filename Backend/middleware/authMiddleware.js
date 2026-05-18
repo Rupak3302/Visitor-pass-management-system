@@ -25,11 +25,11 @@ const protect = async (req, res, next) => {
             // .select('-password') ensures we don't accidentally send the password back in the response
             req.user = await user.findById(decoded.id).select('-password');
 
-            if (!req.user) {
-                return res.status(401).json({
-                    message: 'User not found, token is invalid'
-                });
-            }
+            // if (!req.user) {
+            //     return res.status(401).json({
+            //         message: 'User not found, token is invalid'
+            //     });
+            // }
 
             // If everything is good, call next() to move on to the next middleware or route handler
             next();

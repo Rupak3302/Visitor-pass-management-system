@@ -1,41 +1,10 @@
 const Appointment = require('../models/appointmentModels'); // the appointment model
 const Visitor = require('../models/visitorModels'); // the visitor model
-
-// const Pass = require('../models/passModels'); // the pass model
+const Pass = require('../models/passModels'); // the pass model
+const { generateQRCode, generatePDFBadge } = require('../controllers/passController');
 const sendEmail = require('../utils/emailService'); // the email service
-
-// const qrCode = require('qrcode'); // the qr code generator 
-// const PDFDocument = require('pdfkit'); // the pdf generator
-// const path = require('path');
-
-// // Create a new appointment
-// // POST /api/appointments
-// // Private (Admin and Host)
-// exports.scheduleAppointment = async (req, res) => {
-//     try {
-//         const { visitorId, date, time, purpose } = req.body;
-
-//         // The hostId is taken from the authenticated user making the request
-//         const hostId = req.user._id;  
-
-//         const appointment = await Appointment.create({
-//             visitorId,
-//             hostId,
-//             date,
-//             time,
-//             purpose,
-//             status: 'pending' // default state
-//         });
-        
-//         res.status(201).json(appointment);
-
-//     } catch (error) {
-//         res.status(500).json({
-//             message: `Server Error: ${error.message}`
-//         });
-//     }
-// };
-
+// const sendSMS = require('../utils/smsService'); // the sms service
+const crypto = require('crypto'); // for generating random numbers
 
 
 // Get all appointments (with Search, Filter & Role check)
@@ -52,8 +21,8 @@ exports.getAppointments = async (req, res) => {
         }
 
         // Filter by status if provided in query (e.g., ?status=approved)
-        if (res.query.status) {
-            filter.status = res.query.status; 
+        if (req.query.status) {
+            filter.status = req.query.status; 
         }
 
         // Search by visitor name or email or phone
@@ -76,10 +45,10 @@ exports.getAppointments = async (req, res) => {
 
         // If they Admin or Security, the query stay empty, means find all appointments 
         const appointments = await Appointment.find(filter)
-            .populate('visitorId', 'name email phone photo purpose') // populate visitor details
-            .populate('hostId', 'name email') // populate hosts details
-            .populate('actionBy', 'name') // populate who approved/rejected the appointment
-            .sort({ visitDate: 1}); // upcoming dates first 
+            .populate('visitorId', 'name email phone photoUrl purpose company')
+            .populate('hostId', 'name email') 
+            .populate('actionBy', 'name') 
+            .sort({ createdAt: -1}); // upcoming dates first 
 
         res.status(200).json({
             count: appointments.length,
@@ -94,22 +63,6 @@ exports.getAppointments = async (req, res) => {
     }
 };
 
-exports.getMyAppointments = async (req, res) => {
-    try {
-        // Only the host can see their appointments
-        const appointments = await Appointment.find({ hostId: req.user._id })
-        .populate('visitorId', 'name email phone company photo')
-        .sort({ createdAt: -1 });
-        
-        res.status(200).json({ appointments });
-
-    } catch (error) {
-        console.error("Get appointments error:", error.message);
-        res.status(500).json({
-            message: `Server Error: ${error.message}`
-        });
-    }
-};
 
 // Get a single appointment by ID
 // GET /api/appointments/:id
@@ -117,7 +70,7 @@ exports.getAppointmentById = async (req, res) => {
     try {
 
         const appointment = await Appointment.findById(req.params.id)
-        .populate('visitorId')
+        .populate('visitorId', 'name email phone company photo')
         .populate('hostId', 'name email phone role');
 
         if (!appointment) {
@@ -172,20 +125,61 @@ exports.updateAppointmentStatus = async (req, res) => {
         await appointment.save(); 
 
         // Populate the visitor and host details before returning it to the frontend
-        await appointment.populate('visitorId', 'name email phone');
+        await appointment.populate('visitorId', 'name email phone company photoUrl');
         await appointment.populate('hostId', 'name email');
 
         // Prepare the email notification to the visitor based on the new status
         let emailSubject = '';
         let emailMessage = '';
+        let emailAttachments = [];
+
 
         if (status === 'approved') {
+            // Create the unique 6-digit text code
+            const passCode = crypto.randomBytes(3).toString('hex').toUpperCase();
+
+            // Difine validity of the pass after approved to end of the day
+            const validFrom = new Date();
+
+            const validUntil = new Date(validFrom);
+            validUntil.setHours(23, 59, 59, 999); // Set time to 11:59:59 PM to end
+
+            // Generate the QR code
+            const qrCodeImage = await generateQRCode(passCode);
+
+            // Generate the PDF badge
+            const pdfPath = await generatePDFBadge(appointment.visitorId, appointment, qrCodeImage, passCode);
+
+            console.log('Tracker: Attempting to save pass to DB');
+            // save the pass to the DB
+            const newPass = await Pass.create({
+                appointmentId: appointment._id,
+                visitorId: appointment.visitorId._id,
+                hostId: appointment.hostId._id,
+                qrCodeData: qrCodeImage,
+                passCode: passCode,
+                validFrom: validFrom,
+                validUntil: validUntil,
+                isActive: true,
+                status: 'active',                
+            });
+            console.log('Tracker: Pass saved to DB');
+            
+
+            // Prepare the Email Payload
             emailSubject = 'Your Appointment is Approved - SecurePass';
             emailMessage = `
-                Hello, ${appointment.visitorId.name},
-                
-                Your visit scheduled for ${new Date(appointment.visitDate).toLocaleDateString()} at ${appointment.visitTime} has been Approved by ${req.user.name}.
+                Hello ${appointment.visitorId.name},<br><br>
+                Your visit scheduled for ${new Date(appointment.visitDate).toLocaleDateString()} at ${appointment.visitTime} has been Approved by ${req.user.name}.<br><br>
+                And your pass is also generated.<br><br>
+                <b> The pass Attachment is attached below in PDF format </b><br>
+                You must save this pass because it is required to verify your identity during checkin and checkout.<br><br>
+                And your Pass Code: <b>${passCode}</b> 
                 `;
+            emailAttachments = [{
+                filename: 'visitor-pass.pdf',
+                path: pdfPath
+            }];
         
         } else if (status === 'rejected') {
             emailSubject = 'Your Appointment is Rejected - SecurePass';
@@ -206,7 +200,8 @@ exports.updateAppointmentStatus = async (req, res) => {
             await sendEmail({
                 email: appointment.visitorId.email,
                 subject: emailSubject,
-                message: emailMessage,
+                html: emailMessage, // using html version
+                attachments: emailAttachments // Passing the PDF attachment
             });
 
         } catch (emailError) {
@@ -226,94 +221,26 @@ exports.updateAppointmentStatus = async (req, res) => {
     }
 };
 
-// Generate and download a PDF Badge
-// GET /api/appointment/:id/badge
-// Private (Admin, Security, Host)
-// exports.downloadBadge = async (req, res) => {
+// // Create a new appointment
+// // POST /api/appointments
+// // Private (Admin and Host)
+// exports.scheduleAppointment = async (req, res) => {
 //     try {
+//         const { visitorId, date, time, purpose } = req.body;
 
-//         // Fetch the appointment, generated pass and the visitor's photoUrl
-//         const appointment = await Appointment.findById(req.params.id)
-//             .populate('visitorId', 'name email phone company photoUrl')
-        
-//         if (!appointment.visitorId) {
-//             return res.status(404).json({
-//                 message: 'Visitor not found'
-//             });
-//         }
+//         // The hostId is taken from the authenticated user making the request
+//         const hostId = req.user._id;  
 
-//         if (appointment.status !== 'approved') {
-//             return res.status(400).json({
-//                 message: 'Appointment must be approved first'
-//             });
-//         }
-
-//         const pass = await Pass.findOne({
-//             appointmentId: appointment._id
-//         })
-
-//         if (!pass || !pass.qrCodeData) {
-//             return res.status(404).json({
-//                 message: 'Qr not generated yet'
-//             });
-//         }
-
-//         // Initialize the PDF Document (ID card size)
-//         const doc = new PDFDocument({
-//             size: [300, 500],
-//             margin: 0
+//         const appointment = await Appointment.create({
+//             visitorId,
+//             hostId,
+//             date,
+//             time,
+//             purpose,
+//             status: 'pending' // default state
 //         });
-
-//         // Sending a PDF file not JSON file
-//         res.setHeader('Content-Type', 'application/pdf');
-//         res.setHeader('Content-Disposition', `attachment; filename=VisitorBadge-${appointment.visitorId.name.replace(/\s+/g, '')}.pdf`);
-
-//         // Pipe the pdf directly to the user's browser download
-//         doc.pipe(res);
-
-//         // Design the PDF 
         
-//         // Header
-//         doc.rect(0, 0, 300, 60).fill('#2563eb');
-//         doc.fillColor('#ffffff').fontSize(20).text('VISITOR PASS', 0, 20, { align: 'center'});
-
-//         // Add the visitor photo
-//         if (appointment.visitorId.photoUrl) {
-//             const photoPath = path.join(__dirname, '..', appointment.visitorId.photoUrl);
-//             // Image Size
-//             doc.image(photoPath, 100, 80, { align: 'center', width: 60, height: 60, fit: [100, 80] });
-//         }
-
-//         // Visitor Details
-//         doc.fillColor('#000000').fontSize(18).text(appointment.visitorId.name, 0, 180, { align: 'center'});
-
-//         doc.fontSize(12).fillColor('#64748b').moveDown(0.5);
-//         if (appointment.visitorId.email) doc.text(appointment.visitorId.email, { align: 'center' });
-//         if (appointment.visitorId.phone) doc.text(appointment.visitorId.phone, { align: 'center' });
-//         doc.text(appointment.visitorId.company || 'Guest', { align: 'center' });
-
-
-//         // Appoinment Details
-//         doc.moveDown(1);
-//         doc.fontSize(12).fillColor('#000000');
-//         doc.text(`Date: ${new Date(appointment.date).toLocaleDateString()}`, { align: 'center'});
-//         doc.text(`Time: ${appointment.time}`, { align: 'center'});
-
-//         // QR Code
-//         // this splits off the "data:image/png.base64," part and turns the rest into a 
-//         try {
-//             const qrBuffer = Buffer.from(pass.qrCodeData.split(',')[1], 'base64');
-//             doc.image(qrBuffer, 105, 290, { align: 'center', width: 100, height: 100 }); 
-//         } catch (err) {
-//             console.log("Could not load QR code:", err.message);
-//         }
-
-//         // Footer
-
-//         doc.rect(0, 470, 500, 30).fill('#f1f5f9');
-//         doc.fontSize(10).fillColor('#92a3b8').text('Please wear this badge at all times.', 0, 400, { align: 'center'});
-
-//         doc.end();
+//         res.status(201).json(appointment);
 
 //     } catch (error) {
 //         res.status(500).json({

@@ -1,10 +1,13 @@
 import { useState, useContext } from "react";
+import { useAuth } from "../hooks/useAuth.jsx";
 // useNavigate: A tool to programmatically change the page (e.g., redirect to dashboard after login)
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { AuthContext } from '../context/AuthContext.jsx';
-import { Shield, Mail, Lock, LogIn, EyeOff, Eye } from "lucide-react";
+import { Shield, ArrowLeft, Mail, Lock, LogIn, EyeOff, Eye } from "lucide-react";
 
 const LoginPage = () => {
+    const { login } = useAuth(); // Grab the global login function
+    const navigate = useNavigate();
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -12,30 +15,34 @@ const LoginPage = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [ isSubmitting, setIsSubmitting ] = useState(false); // Controls the loading spinner
 
-    // Grab the 'login' function from our global context brain 
-    const { login } = useContext(AuthContext);
-    const navigate = useNavigate();
-
     const handleSubmit = async (e) => {
         e.preventDefault();
         setIsSubmitting(true); // turn on the loading state
 
+        console.log('Submitting login with:', { email, password });
+
         // call the backend API using our context function
-        const success = await login(email, password);
+        const result = await login({email, password});
 
         // If backend say all correct , then send them to the dashboard
-        if (success) {
+        if (result.success) {
             navigate('/dashboard');
-        } else {
-            setIsSubmitting(false); // turn off the loading state, If fails
         }
+
+        setIsSubmitting(false); // turn off the loading state, If fails
+
     };
 
     return (
         <div className='flex items-center justify-center min-h-screen bg-slate-50 font-sans'>
             <div className='w-full max-w-md p-8 bg-white border shadow-xl border-slate-100 rounded-3xl'>
 
-                <div className='flex flax-col items-center mb-8 text-center'>
+                {/* Back Button */}
+                <Link to="/" className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-800 transition mb-6">
+                    <ArrowLeft className="w-4 h-4 text-slate-600" /> Back
+                </Link>
+
+                <div className='flex flax-col items-center align-center pl-10 mb-8 text-center'>
                     <Shield className='w-12 h-12 text-blue-600 mb-2' />
                     <h2 className='text-2xl font-bold text-slate-800>'>Owner Portal Access</h2>
                 </div>

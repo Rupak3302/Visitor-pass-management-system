@@ -78,7 +78,11 @@ const RegisterVisitor = () => {
             }
 
             // change the header format to data from formData
-            const res = await api.post('/visitors', data);
+            const res = await api.post('/visitors', data, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                }
+            });
 
 
             // if backend sends success, show green popup
@@ -152,7 +156,7 @@ const RegisterVisitor = () => {
                             <label className="block text-xs font-semibold text-slate-800 uppercase mb-2">Company </label>
                             <div className="relative">
                             <Building className="absolute left-3 top-3 w-5 h-6 text-slate-500" />
-                            <input type="text" name="company" value={formData.company} onChange={handleChange} required
+                            <input type="text" name="company" value={formData.company} onChange={handleChange}
                                 className="w-full border border-slate-200 rounded-lg px-4 py-3 pl-10 text-black focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition" placeholder="Company Name"/>
                             </div>
                         </div>
@@ -217,7 +221,7 @@ const RegisterVisitor = () => {
                     <div>
                         <h2 className="text-white font-bold mb-4 border-b border-slate-300 pb-2">Your Photo (Required) *</h2>
                         <div className="relative border-2 border-dashed border-slate-300 rounded-xl hover:bg-slate-100/50 transition flex flex-col items-center justify-center p-8 overflow-hidden group">
-                        <input type="file" name="photo" accept="image/*" onChange={handlePhotoChange} required className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+                        <input type="file" name="photo" accept="image/*" onChange={handlePhotoChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
                         
                         {photoPreview ? (
                             <img src={photoPreview} alt="Preview" className="h-32 w-32 object-cover rounded-full mb-2" />

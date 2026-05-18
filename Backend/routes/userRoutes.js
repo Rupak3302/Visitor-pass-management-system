@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 
 // Import the user controller functions
-const { loginUser, registerUser, getUsers } = require('../controllers/userController');
+const { loginUser, registerUser, getUserById, } = require('../controllers/userController');
 
 const { protect } = require('../middleware/authMiddleware'); // Import the auth middleware for protected routes
 
@@ -14,7 +14,7 @@ router.post('/login', loginUser);
 router.post('/register', registerUser);
 
 // when a GET request is made to the /users endpoint ,run the getUsers function
-router.get('/users', protect, getUsers); 
+router.get('/users/:id', protect, getUserById); 
 
 
 module.exports = router;

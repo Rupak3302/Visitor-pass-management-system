@@ -3,7 +3,8 @@ const router = express.Router();
 
 const {
     scanPass,
-    getAllLogs
+    // getAllLogs
+    getTodayLogs
 } = require('../controllers/checkLogsController');
 
 const {
@@ -16,16 +17,16 @@ const {
 router.post(
     '/scan',
     protect,
-    authorizeRoles('security', 'admin'),
+    authorizeRoles('security'),
     scanPass
 );
 
 // Only admin can view all cheklogs
 router.get(
-    '/',
+    '/today',
     protect,
-    authorizeRoles('admin', 'security'),
-    getAllLogs
+    // authorizeRoles('security'),
+    getTodayLogs
 );
 
 module.exports = router;

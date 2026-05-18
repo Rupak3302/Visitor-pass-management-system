@@ -4,12 +4,12 @@ import { AuthContext } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { LogOut, Shield, UserCircle } from 'lucide-react';
 
-import AdminPanel from './dashboards/AdminPanel';
-import HostPanel from './dashboards/HostPanel';
-import SecurityPanel from './dashboards/SecurityPanel';
+import AdminPanel from '../pages/dashboards/AdminPanel';
+import HostPanel from '../pages/dashboards/HostPanel';
+import SecurityPanel from '../pages/dashboards/SecurityPanel';
 
 
-function Dashboard() {
+function Navbar() {
   // Grab the logged-in user data and the logout function from our Context
   const { user, logout } = useContext(AuthContext);
   const navigate = useNavigate();
@@ -37,7 +37,7 @@ function Dashboard() {
     <div className="min-h-screen bg-slate-50 font-sans">
 
       {/* Dashboard Navbar */}
-      <nav className="flex items-center justify-between px-8 py-4 bg-white shadow-sm border-b border-slate-200">
+      <nav className="fixed top-0 left-0 w-full z-50 flex items-center justify-between px-8 py-4 bg-white shadow-sm border-b border-slate-200">
 
         <div className="flex items-center gap-2">
           <Shield className="w-8 h-8 text-blue-600" />
@@ -63,15 +63,7 @@ function Dashboard() {
       </nav>
 
       {/* Content Area */}
-      <main className="max-w-6xl px-8 mx-auto mt-10">
-
-        {/* Welcome Banner */}
-        {/* <div className="p-8 bg-white border border-slate-100 rounded-2xl shadow-sm mb-8">
-          <h1 className="text-3xl font-bold text-slate-800">Welcome back, {user.name}!</h1>
-          <p className="mt-2 text-lg text-slate-600">
-            You are logged into the system with <span className="font-bold text-blue-600 uppercase bg-blue-50 px-2 py-1 rounded">{user.role}</span> privileges.
-          </p>
-        </div> */}
+      <main className="max-w-7xl px-8 mx-auto pt-20 pb-10">
 
         {/* Role-Based Dashboard Placeholder */}
         <div className="mt-8 mb-8">
@@ -86,4 +78,4 @@ function Dashboard() {
   );
 }
 
-export default Dashboard;
+export default Navbar;

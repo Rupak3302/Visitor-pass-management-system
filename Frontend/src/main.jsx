@@ -10,7 +10,7 @@ import { Toaster } from 'react-hot-toast';
 // Inject our entire React app into it
 ReactDOM.createRoot(document.getElementById('root')).render(
 
-  <React.StrictMode>
+  // <React.StrictMode>
 
     <AuthProvider>
       <App />
@@ -20,7 +20,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
       <Toaster position="top-right" />
     </AuthProvider>
 
-  </React.StrictMode>
+  // </React.StrictMode>
 );
 
 

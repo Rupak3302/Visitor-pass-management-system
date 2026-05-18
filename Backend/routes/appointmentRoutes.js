@@ -3,18 +3,20 @@ const router = express.Router();
 
 const { 
     // scheduleAppointment,
-    // getAppointments,
-    getMyAppointments,
+    getAppointments,
     getAppointmentById, 
     updateAppointmentStatus,
     // downloadBadge
 } = require('../controllers/appoinmentController');
 
-
 const { 
     protect, 
     authorizeRoles 
 } = require('../middleware/authMiddleware');
+
+
+
+
 
 
 // Route: POST /api/appointments
@@ -27,21 +29,14 @@ const {
 // );
 
 // Route: GET /api/appointments
-// router.get(
-//     '/',
-//     protect,
-//     authorizeRoles('admin', 'host'),
-//     getAppointments
-// );
-
-// Route: GET /api/appointments
-// Everyone logged in can view, but the controller filters based on role
+// Everyone logged in can view own appointments, admin can view all
 router.get(
     '/',
     protect,
     authorizeRoles('admin', 'host'),
-    getMyAppointments
+    getAppointments
 );
+
 
 // Route: GET /api/appointments/:id
 router.get(
@@ -70,3 +65,16 @@ router.get(
 );
 
 module.exports = router;
+
+
+
+// getMyAppointments,
+
+// Route: GET /api/appointments
+// Everyone logged in can view, but the controller filters based on role
+// router.get(
+//     '/',
+//     protect,
+//     authorizeRoles('admin', 'host'),
+//     getMyAppointments
+// );

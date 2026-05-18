@@ -15,6 +15,7 @@ const generateToken = (id, role) => {
 // POST /api/user/login
 // Login a Registered User and returns a JWT token 
 exports.loginUser = async (req, res) => {
+    console.log('Login request received with body:', req.body); 
     try {
         const { email, password } = req.body;
 
@@ -125,7 +126,9 @@ exports.registerUser = async (req, res) => {
     }
 };
 
-exports.getUsers = async (req, res) => {
+// GET /api/user/:id
+// Get a single user by ID
+exports.getUserById = async (req, res) => {
     try {
         const users = await User.findById(req.params.id);
 
