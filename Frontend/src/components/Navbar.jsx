@@ -4,7 +4,7 @@ import { AuthContext } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { LogOut, Shield, UserCircle } from 'lucide-react';
 
-import AdminPanel from '../pages/dashboards/AdminPanel';
+// import AdminPanel from '../pages/dashboards/AdminPanel';
 import HostPanel from '../pages/dashboards/HostPanel';
 import SecurityPanel from '../pages/dashboards/SecurityPanel';
 
@@ -15,12 +15,21 @@ function Navbar() {
   const navigate = useNavigate();
 
   // I use useEffect because after the react finishes checking the page then redirect happens safely
+  // useEffect(() => {
+  //   // Only register user can logged in
+  //   if (!user) {
+  //     navigate('/login');
+  //   }
+  // }, [user, navigate]);
+
   useEffect(() => {
-    // Only register user can logged in
-    if (!user) {
-      navigate('/login');
-    }
-  }, [user, navigate]);
+        if (!user) {
+            navigate('/login');
+        } else if (user.role === 'admin') {
+            // Instantly redirect admins to their new layout!
+            navigate('/admin/users'); 
+        }
+    }, [user, navigate]);
 
   // Only register user can logged in
   if (!user) {
@@ -67,7 +76,7 @@ function Navbar() {
 
         {/* Role-Based Dashboard Placeholder */}
         <div className="mt-8 mb-8">
-          {user.role === 'admin' && <AdminPanel />}
+          {/* {user.role === 'admin' && <AdminPanel />} */}
           {user.role === 'host' && <HostPanel />}
           {user.role === 'security' && <SecurityPanel />}
 

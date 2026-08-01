@@ -32,6 +32,7 @@ exports.registerVisitor = async (req, res) => {
         
         // save the visitor to the database
         const newVisitor = await Visitor.create({
+            organizationName: hostUser.organizationName,
             name,
             email,
             phone,
@@ -47,6 +48,7 @@ exports.registerVisitor = async (req, res) => {
 
         // We create an appointment (starts as pending - until host/admin approves it)
         const newAppointment = await Appointment.create({
+            organizationName: hostUser.organizationName,
             visitorId: newVisitor._id, // Link to the visitor
             hostId: hostId, // The host they selected
             visitDate: new Date(visitDate),
@@ -146,20 +148,137 @@ exports.getVisitorById = async (req, res) => {
     }
 };
 
-// Get all the hosts ( for dropdown selection when registering a visitor)
+// NEW: Get all unique organizations for the registration dropdown
+// GET /api/visitors/organizations
+exports.getOrganizations = async (req, res) => {
+    try {
+        // .distinct() finds all unique values for a specific field!
+        const orgs = await User.distinct('organizationName', { isActive: true });
+        res.status(200).json({ organizations: orgs });
+    } catch (error) {
+        console.error('Get organizations error:', error.message);
+        res.status(500).json({ message: `Server error: ${error.message}` });
+    }
+};
+
+// Get all the hosts ( filter by organization for dropdown selection when registering a visitor)
 // GET /api/hosts
 exports.getHosts = async (req, res) => {
     try {
-        const hosts = await User.find({
-            role: { $in: ['host', 'admin'] }, // Only return users with host or admin role
+        const { organizationName } = req.query;
+        let filter = {
+            role: 'host', // Only fetch users with the role of host!
             isActive: true,
-        }, 'name email phone' ) // Only return name, email and phone fields
+        };
 
+        // If an organizations is passed, only 
+        if (organizationName && organizationName !== 'undefined') {
+            filter.organizationName = organizationName;
+        }
+
+        const hosts = await User.find(filter, 'name email phone'); // Only return name, email and phone fields
         res.status(200).json({ hosts });
     } catch (error) {
         console.error('Get hosts error:', error.message);
         res.status(500).json({
             message: `Server error: ${error.message}`
+        });
+    }
+};
+
+// ** Admin Visitors Management **
+// GET /api/visitors/admin/all
+exports.getAllVisitorsAdmin = async (req, res) => {
+    try {
+        const { search, host, startDate, endDate } = req.query;
+        let query = { organizationName: req.user.organizationName };
+
+        // Apply the date range filter (if both start and end dates are provided)
+        if (startDate && startDate !== 'undefined') {
+            query.visitDate = { ...query.visitDate, $gte: new Date(startDate) };
+        } 
+        if (endDate && endDate !== 'undefined') {
+            // Set end date to the end of the day (11:59:59 PM)
+            const end = new Date(endDate);
+            end.setHours(23, 59, 59, 999);
+            query.visitDate = { ...query.visitDate, $lte: end };
+        }
+
+        // Apply the search filter
+        const visitorPopulate = { path: 'visitorId' }
+        if (search && search.trim() !== 'undefined' && search.trim() !== '') {
+            // Escape regex characters so things like "+91" don't crash db
+            const safeSearch = search.trim().replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
+            visitorPopulate.match = {
+                $or: [
+                    { name: { $regex: safeSearch, $options: 'i' } },
+                    { email: { $regex: safeSearch, $options: 'i' } },
+                    { phone: { $regex: safeSearch, $options: 'i' } }
+                ]
+            };
+        } 
+
+        // Apply the host dropdown filter
+        const hostPopulate = { path: 'hostId', select: 'name email' };
+        if (host && host !== 'All' && host !== 'undefined') {
+            hostPopulate.match = { name: host };
+        }
+
+        // Fetch All appointments that match the date range filter 
+        let appointments = await Appointment.find(query)
+            .populate(visitorPopulate)
+            .populate(hostPopulate)
+            .sort({ createdAt: -1 }); // Sort by visit date
+
+        // Backup in case database returns null
+        if (!appointments) appointments = [];
+
+        // 
+        appointments = appointments.filter(app => app.visitorId !== null && app.hostId !== null); 
+
+        // Convert the appointments to visitors
+        const formattedVisitors = appointments.map(app => {
+            const visitor = app.visitorId;
+            const hostUser = app.hostId;
+
+            // If the visitor data is missing, then pre-registered. Otherwise, it's invited
+            const visitorType = (!visitor.registerBy || visitor.registerBy === null) ? 'pre-register' : 'invited';
+
+            return {
+                _id : app._id,
+                name: visitor.name || 'Unknown',
+                email: visitor.email || 'No email',
+                phone: visitor.phone || 'No phone',
+                purpose: visitor.purpose || 'Other',
+                host: {
+                    name: hostUser.name || 'Unassigned',
+                },
+                visitDate: app.visitDate,
+                visitTime: app.visitTime,
+                status: app.status,
+                type: visitorType,
+                createdAt: app.createdAt
+            };
+        });
+
+        // Calculate the ststs cards
+        const ststs = {
+            total: formattedVisitors.length,
+            preRegistered: formattedVisitors.filter(v => v.type === 'pre-register').length,
+            invited: formattedVisitors.filter(v => v.type === 'invited').length,
+        }
+
+        res.status(200).json({
+            success: true,
+            stats: ststs,
+            visitors: formattedVisitors
+        });
+
+    } catch (error) {
+        console.error('Admin fetch all visitors error:', error.message);
+        res.status(500).json({
+            success: false,
+            message: `Server error fetching visitors for admin: ${error.message}`
         });
     }
 };

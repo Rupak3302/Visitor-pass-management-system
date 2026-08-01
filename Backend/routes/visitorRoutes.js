@@ -3,7 +3,7 @@ const router = express.Router();
 const upload = require('../middleware/uploadMiddleware');
 
 // Import the visitor controller functions
-const { registerVisitor, getAllVisitors, getVisitorById, getHosts } = require('../controllers/visitorController');
+const { registerVisitor, getAllVisitors, getVisitorById, getOrganizations, getHosts, getAllVisitorsAdmin } = require('../controllers/visitorController');
 
 // Import the authentication middleware
 const { protect, authorizeRoles } = require('../middleware/authMiddleware');
@@ -24,8 +24,15 @@ router.post(
     registerVisitor
 );
 
-// GET /api/visitors - Get all registered visitors (Protected route)
-// Only Admin, Security and Host can access this 
+// GET /api/visitors/organizations
+// Public - needed for the registration form to populate the organization dropdown
+router.get(
+    '/organizations',
+    getOrganizations
+);
+
+// GET /api/visitors/hosts
+// Public - needed for the registration form to populate the host dropdown
 router.get(
     '/',
     protect,
@@ -39,6 +46,15 @@ router.get(
     protect,
     authorizeRoles('admin', 'host', 'security'),
     getVisitorById
+);
+
+// For Admin panel: 
+// GET /api/visitors/admin/all - Get all visitors with optional filters (Protected route)
+router.get(
+    '/admin/all',
+    protect,
+    authorizeRoles('admin'),
+    getAllVisitorsAdmin
 );
 
 module.exports = router;

@@ -49,22 +49,17 @@ export const AuthProvider = ({ children }) => {
             }
 //             // send the email and pass to our backend node.js
 //             const res = await api.post('/user/login', { email, password });
-
 //             // create a perfect user object
 //             const loggedInUser = {
 //                 ...res.data.user,   // name, email,  etc
 //                 token: res.data.token   // add the token
 //             }
-
 //             // If successfull, then save the returned data (name, role, token)
 //             setUser(loggedInUser);
 //             localStorage.setItem('user', JSON.stringify(loggedInUser));
-
 //             // also save it to the browser memory if refresh the page then still logged in
 //             toast.success(`Welcome back ${loggedInUser.name}!`);
 //             return true;  
-
-        
 //         } catch (error) {
 //             toast.error(error.response?.data?.message || 'Login Failed'); // red popup for an error
 //             return false;

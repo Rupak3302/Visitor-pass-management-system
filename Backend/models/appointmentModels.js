@@ -1,6 +1,11 @@
 const mongoose = require('mongoose');
 
 const appointmentSchema = new mongoose.Schema({
+    organizationName: {
+        type: String,
+        required: true,
+        default: 'Main Company' 
+    },
 
     // The visitor who is coming
     visitorId: {
@@ -29,7 +34,7 @@ const appointmentSchema = new mongoose.Schema({
     // current status of the appointment
     status: {
         type: String,
-        enum: ['pending', 'approved', 'rejected', 'expired', 'completed'],
+        enum: ['pending', 'approved', 'rejected', 'cancelled', 'expired', 'completed'],
         default: 'pending',
     },
 

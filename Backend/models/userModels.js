@@ -2,6 +2,11 @@ const mongoose = require('mongoose');
 
 // This is the schema for the User collection (Admin, Security, Host) in MongoDB
 const userSchema = new mongoose.Schema({
+    organizationName: {
+        type: String,
+        required: true,
+        default: 'Main Company' 
+    },
     name: {
         type: String,
         required: [true, 'Name is required'], 

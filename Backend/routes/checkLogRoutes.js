@@ -3,8 +3,8 @@ const router = express.Router();
 
 const {
     scanPass,
-    // getAllLogs
-    getTodayLogs
+    getTodayLogs,
+    getAllLogsAdmin
 } = require('../controllers/checkLogsController');
 
 const {
@@ -13,7 +13,7 @@ const {
 } = require('../middleware/authMiddleware');
 
 
-// only security and admin can access these routes
+// only security can access these routes
 router.post(
     '/scan',
     protect,
@@ -21,12 +21,20 @@ router.post(
     scanPass
 );
 
-// Only admin can view all cheklogs
+// Only security and admin can view all cheklogs
 router.get(
     '/today',
     protect,
     // authorizeRoles('security'),
     getTodayLogs
 );
+
+// Only Admin can view all cheklogs
+router.get(
+    '/admin/all',
+    protect,
+    authorizeRoles('admin'),
+    getAllLogsAdmin
+)
 
 module.exports = router;

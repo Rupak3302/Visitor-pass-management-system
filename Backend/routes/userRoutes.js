@@ -1,5 +1,7 @@
 const express = require('express');
 const router = express.Router();
+const userController = require('../controllers/userController');
+
 
 // Import the user controller functions
 const { loginUser, registerUser, getUserById, } = require('../controllers/userController');
@@ -14,7 +16,12 @@ router.post('/login', loginUser);
 router.post('/register', registerUser);
 
 // when a GET request is made to the /users endpoint ,run the getUsers function
-router.get('/users/:id', protect, getUserById); 
+router.get('/users/:id', protect, getUserById);
 
+
+// ** Admin system routes **
+router.get('/admin/all', protect, userController.getAllUsers);
+router.patch('/admin/status/:id', protect, userController.UpdateUserStatus);
+router.delete('/admin/delete/:id', protect, userController.deleteUser);
 
 module.exports = router;

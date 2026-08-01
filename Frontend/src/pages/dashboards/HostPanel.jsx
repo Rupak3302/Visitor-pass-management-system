@@ -1,158 +1,53 @@
-// import { Calendar, CheckCircle, XCircle, Clock } from "lucide-react";
-// import { useState, useEffect } from "react";
-// import toast from "react-hot-toast";
-// import api from "../../services/api"
-
-// const HostPanel = () => {
-
-//     const [ myVisitors, setMyVisitors ] = useState([]);
-//     const [ loading, setLoading ] = useState(true)
-
-//     useEffect(() => {
-//         const fetchAppointments = async () => {
-//             try {
-//                 const res = await api.get('/appointments')
-//                 setMyVisitors(res.data);
-
-//             } catch (error) {
-//                 console.error('Faild to fetch appointment');
-//                 toast.error('Could not load your appointment');
-
-//             } finally {
-//                 setLoading(false);
-//             }
-//         };
-
-//         fetchAppointments();
-//     }, []);
-
-//     const handleUpdateStatus = async (appointmentId, newStatus) => {
-//         try {
-//             // this tell the backend to update the status
-//             const res = await api.put(`/appointments/${appointmentId}/status`, {
-//                 status: newStatus
-//             });
-            
-//             toast.success(`Appointment${newStatus} successfully!`);
-
-//             // this update the table locally so instantly turns green/red
-//             setMyVisitors((prevVisitor) =>
-//                 prevVisitor.map((app) =>
-//                     app._id === appointmentId ? {...app, status: newStatus } : app
-//                 )
-//             );
-//         } catch (error) {
-//             console.error(error);
-//             toast.error(error.response?.data?.message || `Faild to ${newStatus} appointment`)
-//         }
-//     };
-
-//     if (loading) return <div className="p-4 text-center">Loading your appointments...</div>;
-
-//     return (
-//         <div className="space-y-6">
-
-//             {/* Top Action Bar */}
-//             <div className="flex items-center justify-between p-4 bg-white border border-slate-200 rounded-xl shadow-sm">
-
-//                 <div className="flex items-center gap-2 text-slate-800">
-//                     <Calendar className="w-5 h-5 text-indigo-600" />
-//                     <h2 className="text-lg font-bold">My Appointments</h2>
-//                 </div>
-
-//             </div>
-
-//             <div className="overflow-hidden bg-white border border-slate-200 rounded-xl shadow-sm">
-//                 <table className="w-full text-left border-collapse">
-
-//                     <thead>
-//                         <tr className="bg-slate-50 border-b border-slate-200 text-sm font-medium text-slate-500">
-//                             <th className="p-4">Visitor Name</th>
-//                             <th className="p-4">Purpose</th>
-//                             <th className="p-4">Time</th>
-//                             <th className="p-4">Status</th>
-//                             <th className="p-4 text-right">Actions</th>
-//                         </tr>
-//                     </thead>
-
-//                     <tbody className="divide-y divide-slate-300">
-
-//                         {myVisitors.map((appointment) => (
-//                             <tr key={appointment._id} className="hover:bg-slate-50 transition">
-//                                 <td className="p-4 font-medium text-slate-900">
-//                                     {appointment.visitorId?.name || 'Unknown Visitor'}
-//                                 </td>
-//                                 <td className="p-4 text-slate-600">{appointment.purpose}</td>
-//                                 <td className="p-4 text-slate-600">{appointment.time}</td>
-//                                 <td className="p-4">
-//                                     <span className={`flex items-center w-fit gap-1 px-3 py-1 text-xs font-semibold rounded-full 
-//                                         ${appointment.status === 'approved' ? 'bg-green-300 text-green-700' : ''}
-//                                         ${appointment.status === 'pending' ? 'bg-yellow-300 text-yellow-700' : ''}
-//                                         ${appointment.status === 'completed' ? 'bg-slate-300 text-slate-600' : ''}
-//                                         ${appointment.status === 'rejected' ? 'bg-red-300 text-red-700' : ''}
-//                                     `}>
-//                                         {appointment.status === 'pending' && <Clock className="w-3 h-3" />}
-//                                         {appointment.status === 'approved' && <CheckCircle className="w-3 h-3"/>}
-//                                         {appointment.status }
-//                                     </span>
-//                                 </td>
-
-//                                 {/* only show the approve/reject button, if status is pending */}
-//                                 <td className="p-4 text-right">
-
-//                                     {appointment.status === 'pending' ? (
-//                                         <div className="flex justify-end gap-2">
-//                                             <button 
-//                                             onClick={() => handleUpdateStatus(appointment._id, 'approved')}
-//                                             className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 transition">
-//                                                 <CheckCircle className="w-4 h-4" /> Approve
-//                                             </button>
-//                                             <button 
-//                                             onClick={() => handleUpdateStatus(appointment._id, 'rejected')}
-//                                             className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition">
-//                                                 <XCircle className="w-4 h-4" /> Reject
-//                                             </button>
-//                                         </div>
-//                                     ) : (
-//                                         <span className="text-sm text-slate-400">No actions</span>
-//                                     )}
-
-//                                 </td>      
-//                             </tr>
-//                         ))}
-
-//                     </tbody>
-
-//                 </table>
-//             </div>
-//         </div>
-//     );
-// };
-
-// export default HostPanel;
-
-// 
-
 import { useState, useEffect } from "react";
-import { CheckCircle, XCircle, Clock, Calendar, User, Briefcase, Search, Mail, Phone, Info } from "lucide-react";
+import { CheckCircle, XCircle, Clock, Calendar, User, Briefcase, Search, Mail, Phone, Info, Plus, X } from "lucide-react";
 import toast from "react-hot-toast";
-import { getAppointments, updateAppointmentStatus} from "../../services/appointmentApi";
-// import Navbar from "../../components/Navbar";
+import { getAppointments, updateAppointmentStatus, inviteVisitor } from "../../services/appointmentApi";
+import Navbar from "../../components/Navbar";
 
 const HostPanel = () => {
+  // States for appointments
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState(null);
 
+  // States for Rescheduling an existing appointment
+  const [ isRescheduleModalOpen, setIsRescheduleModalOpen ] = useState(false);
+  const [ rescheduleApp, setRescheduleApp ] = useState(null);
+  const [ rescheduleDate, setRescheduleDate ] = useState('');
+  const [ rescheduleTime, setRescheduleTime ] = useState({ hour: '12', minute: '00', ampm: 'PM' });
+
+
+  // Modal and Form States for directly invites
+  const [ isInviteModalOpen, setIsInviteModalOpen ] = useState(false);
+  const [ isInviting, setIsInviting ] = useState(false);
+  const [ inviteForm, setInviteForm ] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    company: '',
+    purpose: '',
+    visitDate: '',
+    visitTime: ''
+  });
+
+  // helper array for generate hours and minutes dropdowns
+  const hours = Array.from({ length: 12 }, (_, i) => (i + 1).toString().padStart(2, '0'));
+  const minutes = Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, '0'));
+
+  // state the custom 12 hour time picker 
+  const [ inviteTime, setInviteTime ] = useState({ hour: '', minute: '', ampm: '' });
+
   // New States for Search and Filter
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
+  const [ startDate, setStartDate ] = useState('');
+  const [ endDate, setEndDate ] = useState(''); 
 
   // Fetch data from API with search and filter parameters
   const fetchAppointments = async () => {
     try {
       // Pass the search and status filter directly from the service api 
-      const data = await getAppointments(searchTerm, statusFilter);
+      const data = await getAppointments(searchTerm, statusFilter, startDate, endDate);
 
       const appointmentArray = data.appointments || data; // Handle both { appointments: [...] } and [...] responses
       setAppointments(appointmentArray);
@@ -165,9 +60,105 @@ const HostPanel = () => {
     }
   };
 
+  // Function to handle time changes
+  const handleInviteTimeChange = (field, value) => {
+    const updatedTime = { ...inviteTime, [field]: value };
+    setInviteTime(updatedTime);
+
+    // // convert the time to 24-hour format
+    // let hr = parseInt(updatedTime.hour);
+    // if (updatedTime.ampm === "PM" && hr !== 12) {
+    //   hr += 12;
+    // } else if (updatedTime.ampm === "AM" && hr === 12) {
+    //   hr = 0;
+    // }
+
+    // const formattedHour = hr.toString().padStart(2, "0");
+    const finalTimestr = `${updatedTime.hour}:${updatedTime.minute} ${updatedTime.ampm}`;
+
+    // save the time to the form
+    setInviteForm(prev => ({ ...prev, visitTime: finalTimestr }));
+  }
+
+  const handleRescheduleSubmit = async (e) => {
+    e.preventDefault();
+    setProcessingId(rescheduleApp._id);
+
+    try {
+      // // convert the time to 12-hour format
+      // let hr = parseInt(rescheduleTime.hour);
+      // if (rescheduleTime.ampm === "PM" && hr !== 12) {
+      //   hr += 12;
+      // } else if (rescheduleTime.ampm === "AM" && hr === 12) {
+      //   hr = 0;
+      // }
+
+      // const formattedHour = hr.toString().padStart(2, "0");
+      const finalTimestr = `${rescheduleTime.hour}:${rescheduleTime.minute} ${rescheduleTime.ampm}`;
+
+      await updateAppointmentStatus(rescheduleApp._id, {
+        status: 'approved',
+        visitDate: rescheduleDate,
+        visitTime: finalTimestr
+      });
+
+      toast.success("Appointment rescheduled successfully!");
+      setIsRescheduleModalOpen(false); // close the popup
+
+      // Refresh the table so new approved appointment shows up instantly
+      fetchAppointments();
+    } catch (error) {
+      console.error('Reschedule Error', error);
+      toast.error(error.response?.data?.message || 'Failed to reschedule appointment');    
+    } finally {
+      setProcessingId(null);
+    }
+  }
+
+  const handleInviteSubmit = async (e) => {
+    e.preventDefault();
+    setIsInviting(true);
+    try {
+      await inviteVisitor(inviteForm);
+
+      toast.success("Visitor invited and Pass generated successfully!");
+      setIsInviteModalOpen(false); // close the popup
+
+      // Clear the form
+      setInviteForm({
+        name: '',
+        email: '',
+        phone: '',
+        company: '',
+        purpose: '',
+        visitDate: '',
+        visitTime: ''
+      });
+
+      setInviteTime({ hour: '12', minute: '00', ampm: 'PM' });
+
+      // Refresh the table so new approved appointment shows up instantly
+      fetchAppointments();
+    } catch (error) {
+      console.error('Invite Error', error);
+      toast.error(error.response?.data?.message || 'Failed to invite visitor');
+    } finally {
+      setIsInviting(false);
+    }
+  };
+
   useEffect(() => {
+    // Fetch imediately when the page loads, search or filter changes
     fetchAppointments();
-  }, [searchTerm, statusFilter]);
+
+    // Set up interval to fetch appointments every 5 seconds
+    const interval = setInterval(fetchAppointments, 5000);
+
+    // Clean up the interval on component unmount
+    return () => {
+      clearInterval(interval);
+    };
+  }, [searchTerm, statusFilter, startDate, endDate]);
 
   const handleStatusUpdate = async (id, newStatus) => {
     let rejectionReason = "";
@@ -181,7 +172,15 @@ const HostPanel = () => {
       rejectionReason = reason;
     }
 
+    // If you canceled , ask them to provide a reason
+    if (newStatus === 'cancelled') {
+      const reason = window.prompt("Please provide a reason for cancellation:");
+      if ( reason === null ) return; 
+      rejectionReason = reason;
+    }
+
     setProcessingId(id);
+
     try {
       // pass the id and the data object from the service api file
       const res = await updateAppointmentStatus(id, { 
@@ -217,17 +216,52 @@ const HostPanel = () => {
       case 'approved': return <span className="bg-green-100 text-green-700 font-bold px-3 py-1 rounded-full text-xs">Approved</span>;
       case 'rejected': return <span className="bg-red-100 text-red-700 font-bold px-3 py-1 rounded-full text-xs">Rejected</span>;
       case 'completed': return <span className="bg-blue-100 text-blue-700 font-bold px-3 py-1 rounded-full text-xs">Completed</span>;
+      case 'cancelled': return <span className="bg-slate-100 text-slate-700 font-bold px-3 py-1 rounded-full text-xs">Cancelled</span>
       default: return <span className="bg-amber-100 text-amber-700 font-bold px-3 py-1 rounded-full text-xs animate-pulse">Pending</span>;
     }
+  };
+
+  // Helper function to format date and time
+  const formatTime = (timeString) => {
+    if (!timeString) return '--:--';
+
+    if (timeString.toUpperCase().includes('AM') || timeString.toUpperCase().includes('PM')) {
+        return timeString; // Already in 12-hour format
+    }
+
+    // Split the HH:MM format into hours and minutes
+    const [hourString, minute] = timeString.split(':');
+    let hour = parseInt(hourString, 10);
+
+    // Convert to 12-hour format
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    hour = hour % 12; 
+    hour = hour ? hour : 12; // convert 0 to 12
+
+    // Add leading zero if necessary
+    const formattedHour = hour < 10 ? `0${hour}` : hour;
+
+    // Return the formatted time: HH:MM AM/PM
+    return `${formattedHour}:${minute} ${ampm}`;
   };
 
   return (
     <div className="space-y-6 mt-6">
       
-      {/* Header */}
-      <div>
-        <h2 className="text-2xl font-bold text-slate-800">My Appointments</h2>
-        <p className="text-slate-500 text-sm">Review and manage your visitor requests</p>
+      {/* Header & Invite Button */}
+      <div className="flex justify-between items-center mt-6">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-800">My Appointments</h2>
+          <p className="text-slate-500 text-sm">Review and manage your visitor requests</p>
+        </div>
+
+        <button
+          onClick={() => setIsInviteModalOpen(true)}
+          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-medium transition-all shadow-sm shadow-blue-200"
+          >
+            <Plus className="w-5 h-5" />
+            Invite
+        </button>
       </div>
 
       {/* SUMMARY CARDS */}
@@ -255,18 +289,56 @@ const HostPanel = () => {
       </div>
 
       {/* SEARCH & FILTER */}
-      <div className="flex flex-col md:flex-row gap-4 justify-between items-center bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+      <div className="flex flex-col lg:flex-row gap-4 justify-between items-center bg-white p-4 rounded-2xl border border-slate-200 shadow-sm mt-6">
         
         {/* Search Bar */}
-        <div className="relative w-full md:w-96">
+        <div className="relative w-full lg:max-w-xs">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input 
             type="text" 
             placeholder="Search name, email, or phone..." 
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+            className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all"
           />
+        </div>
+
+        {/* Filtering by date range*/}
+        <div className="flex items-center gap-3 lg:w-auto">
+          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 w-full sm:w-auto">
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">From</span>
+            <input 
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="bg-transparent text-sm text-slate-700 outline-none coursor-pointer focus:text-blue-600" 
+            />
+          </div>
+
+          <span className="text-slate-300 font-medium">—</span>
+
+          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 w-full sm:w-auto">
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">To</span>
+            <input 
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="bg-transparent text-sm text-slate-700 outline-none coursor-pointer focus:text-blue-600" 
+            />
+          </div>
+
+          {/* clear date filter reset button */}
+          {(startDate || endDate) && (
+            <button
+              onClick={() => {
+                setStartDate('');
+                setEndDate('');
+              }}
+              className="flex items-center gap-2 bg-red-50 border border-red-100 rounded-xl px-3 py-1.5 w-full sm:w-auto"
+            >
+              Clear
+            </button>
+          )}
         </div>
 
         {/* Status Dropdown */}
@@ -358,7 +430,7 @@ const HostPanel = () => {
                       </p>
                       <p className="text-sm text-slate-500 flex items-center gap-1 mt-0.5">
                         <Clock className="w-4 h-4 text-slate-400" />
-                        {new Date (`2000-01-01T${app.visitTime}:00`).toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit', hour12: true})}
+                        {formatTime(app.visitTime)}
                       </p>
                     </td>
 
@@ -371,6 +443,11 @@ const HostPanel = () => {
                           <Info className="w-3 h-3 flex-shrink-0 mt-0.5" /> {app.rejectionReason}
                         </p>
                       )}
+                      {app.status === 'cancelled' && app.rejectionReason && (
+                        <p className="text-xs text-slate-500 mt-1 flex items-start gap-1 max-w-[150px]">
+                          <Info className="w-3 h-3 text-slate-400 flex-shrink-0 mt-0.5" /> {app.rejectionReason}
+                        </p>
+                      )}
                     </td>
 
                     {/* Action Buttons Column */}
@@ -381,21 +458,50 @@ const HostPanel = () => {
                         <div className="flex justify-end gap-2">
                           <button 
                             onClick={() => handleStatusUpdate(app._id, 'approved')}
-                            className="flex items-center gap-1 bg-green-50 hover:bg-green-100 border border-green-200 text-green-700 px-3 py-1.5 rounded-lg font-bold text-sm transition shadow-sm"
+                            className="flex items-center gap-1 bg-green-50 hover:bg-green-100 border border-green-200 text-green-700 px-3 py-1.5 rounded-lg font-bold text-sm transition-colors shadow-sm"
                           >
                             <CheckCircle className="w-4 h-4" /> Approve
+                          </button>
+
+                          <button 
+                            onClick={() => {
+                              setRescheduleApp(app);
+                              setRescheduleDate(app.visitDate ? app.visitDate.split('T')[0] : '');
+                              setIsRescheduleModalOpen(true);
+                            }}
+                            className="flex items-center gap-1 bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 px-3 py-1.5 rounded-lg font-bold text-sm transition-colors shadow-sm"
+                            >
+                            <Calendar className="w-4 h-4" /> Reschedule
                           </button>
                           
                           <button 
                             onClick={() => handleStatusUpdate(app._id, 'rejected')}
-                            className="flex items-center gap-1 bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 px-3 py-1.5 rounded-lg font-bold text-sm transition shadow-sm"
+                            className="flex items-center gap-1 bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 px-3 py-1.5 rounded-lg font-bold text-sm transition-colors shadow-sm"
                           >
                             <XCircle className="w-4 h-4" /> Reject
                           </button>
                         </div>
                       ) : (
                         <span className="text-xs font-semibold text-slate-400 uppercase">
-                           {app.status === 'approved' ? 'Pass Issued' : 'No Actions'}
+                            {app.status === 'approved' ? (
+                              <div className="flex flex-col items-end gap-1">
+                                <span className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Pass Issued</span>
+                                <button
+                                  onClick={() => handleStatusUpdate(app._id, 'cancelled')}
+                                  className="flex items-center gap-0.5 text-xs font-bold text-red-500 hover:text-red-700 
+                                  bg-transparent border-none transition-colors"
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                  CANCEL VISIT
+                                </button>
+                              </div>
+                            ) : (
+                              app.status === 'cancelled' ? (
+                                <span className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Cancelled</span>
+                              ) : (
+                                <span className="text-xs font-semibold text-slate-400 uppercase tracking-widest">No Action</span>
+                              )
+                            )}  
                         </span>
                       )}
                     </td>
@@ -406,6 +512,188 @@ const HostPanel = () => {
           </div>
         )}
       </div>
+
+      {/* Invite Visitor Modal Part */}
+      {isInviteModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+              
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+              <div>
+                  <h3 className="text-lg font-bold text-slate-800">Directly Invite a Visitor</h3>
+                  <p className="text-sm text-slate-500">This will automatically approve them and send a QR Pass.</p>
+              </div>
+              <button 
+                  onClick={() => setIsInviteModalOpen(false)}
+                  className="text-slate-400 hover:text-red-500 transition-colors p-1"
+              >
+                  <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Modal Form */}
+            <form onSubmit={handleInviteSubmit} className="p-6">
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                  {/* Row 1 */}
+                  <div>
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Full Name *</label>
+                      <input type="text" required value={inviteForm.name} onChange={(e) => setInviteForm({...inviteForm, name: e.target.value})} className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                  </div>
+                  <div>
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Email *</label>
+                      <input type="email" required value={inviteForm.email} onChange={(e) => setInviteForm({...inviteForm, email: e.target.value})} className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                  </div>
+                  
+                  {/* Row 2 */}
+                  <div>
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Phone *</label>
+                      <input type="text" required value={inviteForm.phone} onChange={(e) => setInviteForm({...inviteForm, phone: e.target.value})} className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                  </div>
+                  <div>
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Company</label>
+                      <input type="text" value={inviteForm.company} onChange={(e) => setInviteForm({...inviteForm, company: e.target.value})} className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                  </div>
+
+                  {/* Row 3 */}
+                  <div className="col-span-2">
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Purpose of Visit *</label>
+                      <input type="text" required placeholder="e.g. Interview, Meeting, Maintenance" value={inviteForm.purpose} onChange={(e) => setInviteForm({...inviteForm, purpose: e.target.value})} className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                  </div>
+
+                  {/* Row 4 */}
+                  <div>
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Date *</label>
+                      <input type="date" required value={inviteForm.visitDate} onChange={(e) => setInviteForm({...inviteForm, visitDate: e.target.value})} className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-700" />
+                  </div>
+                  <div>
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Time *</label>
+                      <div className="flex items-center gap-1.5">
+                        {/* hour selector */}
+                        <select
+                          value={inviteTime.hour}
+                          onChange={(e) => handleInviteTimeChange('hour', e.target.value)}
+                          className="w-full px-2.5 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-700 bg-white text-center appearance-none cursor-pointer"
+                          >
+                            <option value="" disabled>--</option>
+                          {hours.map(h => <option key={h}>{h}</option>)} 
+                        </select>
+                        <span className="text-slate-400 font-bold">:</span>
+                        
+                        {/* minute selector */}
+                        <select 
+                          value={inviteTime.minute}
+                          onChange={(e) => handleInviteTimeChange('minute', e.target.value)}
+                          className="w-full px-2.5 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-700 bg-white text-center appearance-none cursor-pointer"
+                          >
+                            <option value="" disabled>--</option>
+                          {minutes.map(m => <option key={m}>{m}</option>)}
+                        </select>
+
+                        {/* AM/PM selector */}
+                        <select 
+                          value={inviteTime.ampm}
+                          onChange={(e) => handleInviteTimeChange('ampm', e.target.value)}
+                          className="w-full px-2.5 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-700 bg-white text-center font-semibold appearance-none cursor-pointer"
+                          >
+                          <option value="" disabled>--</option>
+                          <option value="AM">AM</option>
+                          <option value="PM">PM</option>
+                        </select>
+                      </div>
+                  </div>
+                </div>
+
+                {/* Modal Footer */}
+                <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+                  <button type="button" onClick={() => setIsInviteModalOpen(false)} className="px-5 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium transition-colors">
+                      Cancel
+                  </button>
+                  <button type="submit" disabled={isInviting} className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2 disabled:opacity-70">
+                      {isInviting ? 'Sending Invite...' : 'Send Invite'}
+                  </button>
+                </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Reschedule Model Part */}
+      {isRescheduleModalOpen && rescheduleApp && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+              
+            {/* Header Info */}
+            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+              <div>
+                  <h3 className="text-lg font-bold text-slate-800">Reschedule Appointment</h3>
+                  <p className="text-xs text-slate-500">For: <span className="font-semibold text-slate-700">{rescheduleApp.visitorId?.name}</span></p>
+              </div>
+              <button onClick={() => setIsRescheduleModalOpen(false)} className="text-slate-400 hover:text-red-500 transition-colors p-1">
+                  <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Setup Selection Form */}
+            <form onSubmit={handleRescheduleSubmit} className="p-6">
+              <div className="flex flex-col gap-4 mb-6">
+
+                {/* Choose New Calendar Date */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">New Date *</label>
+                  <input 
+                      type="date" 
+                      required 
+                      value={rescheduleDate} 
+                      onChange={(e) => setRescheduleDate(e.target.value)} 
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-700" 
+                  />
+                </div>
+
+                {/* Custom 12-Hour Dropdowns Selector Block */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">New Time *</label>
+                  <div className="flex items-center gap-1.5">
+                    <select
+                        value={rescheduleTime.hour}
+                        onChange={(e) => setRescheduleTime({...rescheduleTime, hour: e.target.value})}
+                        className="w-full px-2.5 py-2 border border-slate-200 rounded-lg text-slate-700 bg-white text-center appearance-none cursor-pointer focus:ring-2 focus:ring-blue-500 outline-none"
+                    >
+                        {hours.map(h => <option key={h} value={h}>{h}</option>)}
+                    </select>
+                    <span className="text-slate-400 font-bold">:</span>
+                    <select
+                        value={rescheduleTime.minute}
+                        onChange={(e) => setRescheduleTime({...rescheduleTime, minute: e.target.value})}
+                        className="w-full px-2.5 py-2 border border-slate-200 rounded-lg text-slate-700 bg-white text-center appearance-none cursor-pointer focus:ring-2 focus:ring-blue-500 outline-none"
+                    >
+                        {minutes.map(m => <option key={m} value={m}>{m}</option>)}
+                    </select>
+                    <select
+                        value={rescheduleTime.ampm}
+                        onChange={(e) => setRescheduleTime({...rescheduleTime, ampm: e.target.value})}
+                        className="w-full px-2.5 py-2 border border-slate-200 rounded-lg font-semibold text-slate-700 bg-white text-center appearance-none cursor-pointer focus:ring-2 focus:ring-blue-500 outline-none"
+                    >
+                        <option value="AM">AM</option>
+                        <option value="PM">PM</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+                {/* Options Submission Footer */}
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+                <button type="button" onClick={() => setIsRescheduleModalOpen(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium text-sm transition-colors">
+                    Cancel
+                </button>
+                <button type="submit" className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-medium text-sm transition-colors shadow-sm">
+                    Confirm
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+        )}
     </div>
   );
 };

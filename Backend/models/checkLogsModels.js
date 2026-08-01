@@ -1,6 +1,11 @@
 const mongoose = require('mongoose');
 
 const checkLogSchema = new mongoose.Schema({
+    organizationName: {
+        type: String,
+        required: true,
+        default: 'Main Company' 
+    },
     passId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Pass',

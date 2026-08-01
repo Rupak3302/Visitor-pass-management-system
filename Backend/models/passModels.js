@@ -1,6 +1,11 @@
 const mongoose = require('mongoose');
 
 const passSchema = new mongoose.Schema({
+    organizationName: {
+        type: String,
+        required: true,
+        default: 'Main Company' 
+    },
     appointmentId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Appointment',

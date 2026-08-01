@@ -6,10 +6,13 @@ const cors = require('cors'); // allow forntend-backend communication
 const connectDB = require('./config/db'); // our MongoDB connection function
 
 // Import the route files
+const dashboardRoutes = require('./routes/dashboardRoutes'); // dashboard-related routes
 const userRoutes = require('./routes/userRoutes'); // user-related routes
 const visitorRoutes = require('./routes/visitorRoutes'); // visitor-related routes
 const appointmentRoutes = require('./routes/appointmentRoutes'); // appointment-related routes
 const checkLogsRoutes = require('./routes/checkLogRoutes'); // check logs-related 
+const reportRoutes = require('./routes/reportRoutes');
+
 const path = require('path');
 const { config } = require('dotenv');
 
@@ -29,7 +32,8 @@ app.use(cors());
 app.use(express.json());
 // app.use(express.urlencoded({ extended: true }));
 
-
+// Use the dashboard routes
+app.use('/api/dashboard', dashboardRoutes);
 // Use the user routes (login, register, get users)
 app.use('/api/user', userRoutes);
 // Use the visitor routes
@@ -38,6 +42,8 @@ app.use('/api/visitors', visitorRoutes);
 app.use('/api/appointments', appointmentRoutes);
 // Use the check logs routes
 app.use('/api/checklogs', checkLogsRoutes);
+// Use the report routes
+app.use('/api/reports', reportRoutes);
 //allow to view the image
 app.use('/uploads', 
     express.static(path.join(__dirname, 'uploads'))

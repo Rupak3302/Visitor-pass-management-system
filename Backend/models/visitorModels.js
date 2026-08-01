@@ -1,6 +1,11 @@
 const mongoose = require('mongoose');
 
 const visitorSchema = new mongoose.Schema({
+    organizationName: {
+        type: String,
+        required: true,
+        default: 'Main Company' 
+    },
     name: {
         type: String,
         required: [true, 'Visitor name is required'],

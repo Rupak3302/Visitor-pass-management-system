@@ -17,7 +17,15 @@ const LandingPage = () => {
                 </div>
 
                 {/* Navigation link area */}
-                <div className='flex gap-4'>
+                <div className='flex gap-4 items-center'>
+
+                    {/* NEW: Company Sign Up */}
+                    <Link to="/register-org" className='text-sm font-bold text-slate-500 hover:text-blue-600 transition'>
+                        Register Company
+                    </Link>
+
+                    <div className="w-px h-6 bg-slate-200 mx-2"></div>
+
                     <Link to="/register-visitor" className='px-5 py-2 text-sm font-bold text-blue-500 border border-blue-500 rounded-xl hover:bg-blue-200 transition shadow-md'>
                         Pre-Register Visitor
                     </Link>

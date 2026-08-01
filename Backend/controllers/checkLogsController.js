@@ -27,14 +27,10 @@ exports.scanPass = async (req, res) => {
 
             pass = allPasses.find(p => p.passCode === cleanPassCode)
             console.log('Did JAVASCRIPT find it?:', pass ? 'yes' : 'no');
-            // pass = await Pass.findOne({ passCoad: cleanPassCode })
-            //     .populate('visitorId')
-            //     .populate('appointmentId');
-
-            // console.log('Regex search result:', pass);
             
         } else if (qrData)  {
-            pass = await Pass.findById(qrData)
+            const cleanQrData = qrData.trim().toUpperCase();
+            pass = await Pass.findOne({ passCode: cleanQrData })
                 .populate('visitorId')
                 .populate('appointmentId');
         }
@@ -46,6 +42,13 @@ exports.scanPass = async (req, res) => {
                 message: 'Invalid Pass: Details not found'
             });
         }
+
+        if (pass.status === 'cancelled' || pass.appointmentId.status === 'cancelled') {
+            return res.status(400).json({
+                message: 'This pass is cancelled'
+            });
+        }
+
         // Check if pass Expiration
         const now = new Date();
 
@@ -66,8 +69,7 @@ exports.scanPass = async (req, res) => {
         }
 
         // check pass is already 
-        if (!pass.isActive ||pass.status === 'expired' || pass.status === 'inactive') {
-            // const timeStr = pass.updatedAt ? new Date(pass.updatedAt).toLocaleString() : 'Unknown time';
+        if (!pass.isActive || pass.status === 'expired' || pass.status === 'cancelled' || pass.status === 'inactive') {
             return res.status(400).json({
                 message: `This pass is currently ${pass.status} and cannot be used`
             });
@@ -87,7 +89,8 @@ exports.scanPass = async (req, res) => {
                 appointmentId: pass.appointmentId._id,
                 hostId: pass.hostId._id,
                 scannedBy: securityId,
-                status: 'Inside'
+                status: 'Inside',
+                organizationName: req.user.organizationName
 
             });
 
@@ -144,16 +147,7 @@ exports.getTodayLogs = async (req, res) => {
         //Get start and end of the day
         const startOfToday = new Date();
         startOfToday.setHours(0, 0, 0, 0);
-        // const endOfDay = new Date();
-        // endOfDay.setHours(23, 59, 59, 999);
 
-        // Get today's logs
-        // const todayLogs = await CheckLog.find({
-        //     createdAt: {
-        //         $gte: startOfDay,
-        //         $lte: endOfDay
-        //     }
-        // })
         const recentLogs = await CheckLog.find({
             createdAt: {
                 $gte: startOfSevenDaysAgo,
@@ -184,139 +178,93 @@ exports.getTodayLogs = async (req, res) => {
     }
 };
 
+// ** ADMIN Management Section **
 
+// Get all check logs with filter 
+// GET /admin/checklogs
+// Private (Admin)
 
+exports.getAllLogsAdmin = async (req, res) => {
+  try {
+    const { search, hostId, securityId, startDate, endDate } = req.query;
+    let query = { organizationName: req.user.organizationName };
 
-//         // check pass is already expired
-//         if (pass.status !== 'active') {
-//             return res.status(400).json({
-//                 message: 'Pass Inactive'
-//             });
-//         }
+    if (hostId && hostId !== 'All' && hostId !== 'undefined') query.hostId = hostId;
+    if (securityId && securityId !== 'All' && securityId !== 'undefined') query.scannedBy = securityId;
 
-//         // verify if the pass is expired or deactivated
-//         const now = new Date();
-//         if (pass.status !== 'active') {
-//             return res.status(400).json({
-//                 message: `Pass is currently ${pass.status}` 
-//             });
-//         }
-//         if (now > pass.validFrom || now > pass.validUntil) {
-             
-//             // auto deactivate if pass is expired
-//             if (now > pass.validUntil) {
-//                 pass.status = 'expired';
-//                 await pass.save();
-//             }
-//             return res.status(400).json({
-//                 message: 'Pass has expired'
-//             });
-//         }
+    // Date Range filter
+    if (startDate && startDate !== 'undefined') {
+        query.createdAt = { ...query.createdAt, $gte: new Date(startDate) };
+    }
+    if (endDate && endDate !== 'undefined') {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999) // Set to end of the day
+        query.createdAt = { ...query.createdAt, $lte: end };
+    }
 
-//         // Check if already checked in
-//         const activeLog = await checkLog.findOne({
-//             passId: pass._id,
-//             status: 'checked_in'
-//         });
+    // Fatch Alll logs
+    let logs = await CheckLog.find(query)
+        .populate({
+            path: 'passId',
+            populate: [
+                { path: 'visitorId', select: 'name email phone' },
+                { path: 'appointmentId', populate: { path: 'hostId', select: 'name' } },
+            ]
+        })
+        .populate('scannedBy', 'name')
+        .sort({ createdAt: -1 });
 
-//         // The Check-in and Check-out logic
-//         if (activeLog) {
+    // Apply Host Filter ( If spcific host selected )
+    // if (hostId && hostId !== 'All' && hostId !== 'undefined') {
+    //     logs = logs.filter(log => log.passId.appointmentId.hostId._id.toString() === hostId);
+    // }
 
-//             // Scenario 1: They are already inside. This is the Check-out
-//             activeLog.checkOutTime = now;
-//             activeLog.status = 'checked_out';
-//             await activeLog.save();
+    // Apply the search  (by visitor name and passcode)
+    if (search && search !== 'undefined' && search.trim() !== '') {
+        const safeSearch = search.trim().replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&"); // Escape special characters
+        logs = logs.filter(log => log.passId.visitorId.name.toLowerCase().includes(safeSearch.toLowerCase()) || log.passId.passCode.toLowerCase().includes(safeSearch.toLowerCase()));
+    }
 
+    // Unique Host Filter Dropdown
+    // const uniqueHostsMap = new Map();
+    // logs.forEach(log => {
+    //     const host = log.passId.appointmentId.hostId;
+    //     if (host && !uniqueHostsMap.has(host._id.toString())) {
+    //         uniqueHostsMap.set(host._id.toString(), { _id: host._id, name: host.name });
+    //     }
+    // }); 
+    // const hosts = Array.from(uniqueHostsMap.values());
 
-//             // deactivate the pass if they are checked out and pass can't be used anymore
-//             pass.status = 'used';
-//             await pass.save();
+    const hosts = await User.find({ role: 'host',
+        organizationName: req.user.organizationName }).select('name');
+    const securityUsers = await User.find({ role: 'security',
+        organizationName: req.user.organizationName }).select('name');
 
-//             return res.status(200).json({
-//                 message: 'Check-out successful',
-//                 action: 'checked_out',
-//                 visitorName: pass.visitorId.name,
-//                 time: now
-//             });
+    // Calculate cards counts
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
 
-//         } else {
+    const stats = {
+        total: logs.length,
+        today: logs.filter(log => new Date(log.checkInTime) >= todayStart).length,
+        inside: logs.filter(log => log.checkOutTime).length,
+        exited: logs.filter(log => !log.checkOutTime).length,
+    }
 
-//             // Scenario 2: They are not inside. This is the Check-in
-//             if (!req.user || !req.user.role || req.user.role !== 'security') {
+    res.status(200).json({
+        success: true,
+        logs: logs,
+        hosts: hosts,
+        securityUsers: securityUsers,
+        stats: stats
+    });
 
-//                 return res.status(403).json({
-//                     message: 'Only security can check-in'
-//                 });
-//             }
+  } catch (error) {
+      console.error('Admin fetch check logs error:', error);
+      res.status(500).json({
+          success: false,
+          message: `Failed to fetch check logs: ${error.message}`
+      });
+  }
 
-//             const newLog = await checkLog.create({
-//                 passId: pass._id,
-//                 visitorId: pass.visitorId._id,
-//                 scannedBy: req.user._id,
-//                 checkInTime: now,
-//                 status: 'checked_in'
-//             });
-            
-//             return res.status(200).json({
-//                 message: 'Check-in successful',
-//                 action: 'checked_in',
-//                 visitorName: pass.visitorId.name,
-//                 time: now
-//             });
-//         }
-        
-//     } catch (error) {
-//         console.error('Scan pass error:', error.message);
-//         res.status(500).json({
-//             message: `Server Error during scan : ${error.message}`
-//         });
-//     }
-// };
-
-// // Get all check logs
-// // GET /api/checklogs
-// // Private (Admin)
-
-// // Fetch all recent scan logs for the security dashboard
-// exports.getAllLogs = async (req, res) => {
-//   try {
-//     // 1. Fetch the 50 most recent scans, bringing in visitor and pass details
-//     const logs = await CheckLog.find()
-//       .populate('visitorId', 'name phone company')
-//       .populate({
-//         path: 'passId',
-//         select: 'purpose status'
-//       })
-//       .sort({ updatedAt: -1 }) // Newest first
-//       .limit(50);
-
-//     // 2. Count how many people are currently 'checked_in' (inside the building)
-//     const currentlyInsideCount = await CheckLog.countDocuments({ status: 'checked_in' });
-
-//     res.status(200).json({
-//       currentlyInside: currentlyInsideCount,
-//       logs: logs
-//     });
-//   } catch (error) {
-//     console.error('Error fetching security logs:', error);
-//     res.status(500).json({ message: 'Failed to fetch logs' });
-//   }
-// };
-
-
-
-// exports.getAllLogs = async (req, res) => {
-//     try {
-//         const logs = await checkLog.find({})
-//             .populate('passId')
-//             .populate('scannedBy', 'name email') // show which user(security) scanned the pass
-//             .sort({ createdAt: -1 }); // latest logs first
-        
-//         res.status(200).json(logs);
-
-//     } catch (error) {
-//         res.status(500).json({
-//             message: `Server Error: ${error.message}`
-//         });
-//     }
-// };
+};

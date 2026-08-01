@@ -39,7 +39,7 @@ const LoginPage = () => {
 
                 {/* Back Button */}
                 <Link to="/" className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-800 transition mb-6">
-                    <ArrowLeft className="w-4 h-4 text-slate-600" /> Back
+                    <ArrowLeft className="w-4 h-4" /> Back to Home
                 </Link>
 
                 <div className='flex flax-col items-center align-center pl-10 mb-8 text-center'>
