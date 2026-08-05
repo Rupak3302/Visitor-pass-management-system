@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Calendar as CalendarIcon, X, LogIn, LogOut, Clock, Users, Ticket } from 'lucide-react';
 import { getAllLogsAdmin } from '../../../services/checklogApi';
+import { getVisitorPhotoUrl } from '../../../services/imageService';
 import toast from 'react-hot-toast';
 
 const LogsManagement = () => {
@@ -161,9 +162,13 @@ const LogsManagement = () => {
                                     {/* 1. VISITOR DETAILS */}
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center font-bold text-sm shadow-inner">
-                                                {log.passId?.visitorId?.name?.charAt(0).toUpperCase() || '?'}
+                                            {log.passId?.visitorId?.photoUrl ? (
+                                                <img src={getVisitorPhotoUrl(log.passId.visitorId.photoUrl)} alt="Avatar" className="w-10 h-10 rounded-full object-cover border border-slate-200 shadow-sm shrink-0" />
+                                            ) : (
+                                                <div className="w-10 h-10 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center font-bold text-sm">
+                                                {log.passId?.visitorId?.name?.charAt(0).toUpperCase()}
                                             </div>
+                                            )}
                                             <div>
                                                 <p className="text-sm font-bold text-slate-800">{log.passId?.visitorId?.name}</p>
                                                 <div className="flex items-center gap-2 mt-0.5">

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Search, CalendarIcon, Filter, X, CheckCircle, XCircle, Clock, CalendarDays, Plus, Briefcase, Mail, Phone, AlertCircle, CalendarClock } from 'lucide-react';
 import { getAllAppointmentsAdmin, updateAppointmentStatusAdmin, inviteVisitorAdmin } from '../../../services/appointmentApi';
 import { getAllUsers } from '../../../services/usersApi';
+import { getVisitorPhotoUrl } from '../../../services/imageService';
 import toast from 'react-hot-toast';
 
 const AppointmentsManagement = () => {
@@ -349,7 +350,7 @@ const AppointmentsManagement = () => {
                                         <td className="px-4 py-3">
                                             <div className="flex items-center gap-3">
                                                 {app.visitorId?.photoUrl ? (
-                                                    <img src={`http://localhost:5000/uploads/${app.visitorId.photoUrl}`} alt="Avatar" className="w-10 h-10 rounded-full object-cover border border-slate-200 shadow-sm" />
+                                                    <img src={getVisitorPhotoUrl(app.visitorId.photoUrl)} alt="Avatar" className="w-10 h-10 rounded-full object-cover border border-slate-200 shadow-sm" />
                                                 ) : (
                                                     <div className="w-10 h-10 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center font-bold text-sm shadow-inner">
                                                         {app.visitorId?.name?.charAt(0).toUpperCase() || '?'}

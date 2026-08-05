@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Calendar as CalendarIcon, X, Eye, Download, QrCode, Clock, Ticket } from 'lucide-react';
 import { getAllPassesAdmin, downloadPassPdf } from '../../../services/appointmentApi';
+import { getVisitorPhotoUrl } from '../../../services/imageService';
 import toast from 'react-hot-toast';
 
 const PassesManagement = () => {
@@ -71,14 +72,35 @@ const PassesManagement = () => {
     const clearDateFilter = () => { setStartDate(''); setEndDate(''); };
 
     // ---- UI HELPERS ----
-    const getStatusBadge = (status) => {
-        switch (status?.toLowerCase()) {
+    const getDisplayStatus = (pass) => {
+        const status = pass?.status?.toLowerCase();
+        const validUntil = pass?.validUntil ? new Date(pass.validUntil) : null;
+        const isExpiredByDate = validUntil && validUntil < new Date();
+
+        if (status === 'expired' || (status === 'active' && isExpiredByDate)) {
+            return 'expired';
+        }
+
+        if (status === 'inactive' || status === 'used') {
+            return 'used';
+        }
+
+        if (status === 'cancelled') {
+            return 'cancelled';
+        }
+
+        return status || 'unknown';
+    };
+
+    const getStatusBadge = (pass) => {
+        const displayStatus = getDisplayStatus(pass);
+
+        switch (displayStatus) {
             case 'active': return <span className="text-green-600 bg-green-50 px-3 py-1 rounded-full text-xs font-bold border border-green-200">Active</span>;
             case 'expired': return <span className="text-red-600 bg-red-50 px-3 py-1 rounded-full text-xs font-bold border border-red-200">Expired</span>;
-            // case 'inactive':
             case 'used': return <span className="text-slate-600 bg-slate-100 px-3 py-1 rounded-full text-xs font-bold border border-slate-300">Used</span>;
             case 'cancelled': return <span className="text-amber-600 bg-amber-50 px-3 py-1 rounded-full text-xs font-bold border border-amber-200">Cancelled</span>;
-            default: return <span className="text-slate-600 bg-slate-50 px-3 py-1 rounded-full text-xs font-bold border border-slate-200">{status}</span>;
+            default: return <span className="text-slate-600 bg-slate-50 px-3 py-1 rounded-full text-xs font-bold border border-slate-200">{pass?.status || 'Unknown'}</span>;
         }
     };
 
@@ -170,9 +192,13 @@ const PassesManagement = () => {
                                     {/* 1. VISITOR DETAILS */}
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-3">
-                                            <div className="w-9 h-9 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center font-bold text-sm shadow-inner">
-                                                {pass.visitorId?.name?.charAt(0).toUpperCase() || '?'}
+                                            {pass.visitorId?.photoUrl ? (
+                                                <img src={getVisitorPhotoUrl(pass.visitorId.photoUrl)} alt="Avatar" className="w-10 h-10 rounded-full object-cover border border-slate-200 shadow-sm shrink-0" />
+                                            ) : (
+                                                <div className="w-10 h-10 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center font-bold text-sm">
+                                                {pass.visitorId?.name?.charAt(0).toUpperCase()}
                                             </div>
+                                            )}
                                             <div>
                                                 <p className="text-sm font-bold text-slate-800">{pass.visitorId?.name}</p>
                                                 <p className="text-xs font-medium text-slate-500">{pass.visitorId?.email}</p>
@@ -190,6 +216,10 @@ const PassesManagement = () => {
                                             <CalendarIcon className="w-3 h-3 text-slate-400" />
                                             Generated: {new Date(pass.createdAt).toLocaleDateString('en-GB')}
                                         </div>
+                                        <div className={`flex items-center gap-1.5 text-xs font-medium ${getDisplayStatus(pass) === 'expired' ? 'text-red-600' : 'text-slate-500'}`}>
+                                            <Clock className="w-3 h-3" />
+                                            {getDisplayStatus(pass) === 'expired' ? 'Expired' : `Valid until ${new Date(pass.validUntil).toLocaleDateString('en-GB')}`}
+                                        </div>
                                     </td>
 
                                     {/* 3. ISSUED BY (Host) */}
@@ -203,7 +233,7 @@ const PassesManagement = () => {
 
                                     {/* 4. STATUS */}
                                     <td className="px-6 py-4">
-                                        {getStatusBadge(pass.status)}
+                                        {getStatusBadge(pass)}
                                     </td>
 
                                     {/* 5. ACTIONS (View & Download) */}
@@ -218,9 +248,9 @@ const PassesManagement = () => {
                                             </button>
                                             <button 
                                                 onClick={() => handleDownloadPass(pass._id, pass.visitorId?.name)}
-                                                disabled={isDownloading === pass._id}
-                                                className={`p-2 rounded-lg transition-colors border ${isDownloading === pass._id ? 'text-slate-400 bg-slate-50 border-slate-200 cursor-not-allowed animate-pulse' : 'text-slate-400 hover:text-green-600 hover:bg-green-50 border-transparent hover:border-green-200'}`}
-                                                title="Download PDF"
+                                                disabled={isDownloading === pass._id || getDisplayStatus(pass) === 'expired' || getDisplayStatus(pass) === 'cancelled'}
+                                                className={`p-2 rounded-lg transition-colors border ${isDownloading === pass._id || getDisplayStatus(pass) === 'expired' || getDisplayStatus(pass) === 'cancelled' ? 'text-slate-400 bg-slate-50 border-slate-200 cursor-not-allowed animate-pulse' : 'text-slate-400 hover:text-green-600 hover:bg-green-50 border-transparent hover:border-green-200'}`}
+                                                title={getDisplayStatus(pass) === 'expired' ? 'Expired passes cannot be downloaded' : 'Download PDF'}
                                             >
                                                 <Download className="w-5 h-5" />
                                             </button>
@@ -273,7 +303,7 @@ const PassesManagement = () => {
                         </div>
 
                         <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-center">
-                            {getStatusBadge(selectedPass.status)}
+                            {getStatusBadge(selectedPass)}
                         </div>
                     </div>
                 </div>

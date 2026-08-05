@@ -388,7 +388,7 @@ const HostPanel = () => {
                     <td className="p-4">
                       <div className="flex items-center gap-3">
                         {app.visitorId?.photoUrl ? (
-                          <img src={`http://localhost:5000/uploads/${app.visitorId.photoUrl}`} alt="visitor" className="w-12 h-12 rounded-full object-cover border border-slate-200" />
+                          <img src={getVisitorPhotoUrl(app.visitorId.photoUrl)} alt="visitor" className="w-12 h-12 rounded-full object-cover border border-slate-200" />
                         ) : (
                           <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
                             <User className="w-6 h-6" />

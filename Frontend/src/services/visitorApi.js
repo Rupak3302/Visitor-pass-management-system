@@ -3,7 +3,7 @@ import api from './api';
 
 // pre-registering a visitor (with photo upload)
 // Uses multipart/form-data because we are sending a file
-export const registerUser = async (formData) => {
+export const registerVisitor = async (formData) => {
     const response = await api.post('/visitors', formData, {
         headers: {
             'Content-Type': 'multipart/form-data',

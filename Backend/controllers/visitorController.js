@@ -42,7 +42,7 @@ exports.registerVisitor = async (req, res) => {
             hostId,
             visitDate,
             visitTime,
-            registerBy: res.user?._id || null,
+            registerBy: req.user?._id || null,
             notes: notes || '',
         });
 
@@ -103,8 +103,8 @@ exports.getAllVisitors = async (req, res) => {
     try {
         let filter = {};
 
-        if (res.user.role === 'host') {
-            filter.hostId = res.user._id; // Host can only see their visitors
+        if (req.user?.role === 'host') {
+            filter.hostId = req.user._id; // Host can only see their visitors
         }
 
         const Visitors = await Visitor.find(filter)
@@ -187,6 +187,7 @@ exports.getHosts = async (req, res) => {
 };
 
 // ** Admin Visitors Management **
+
 // GET /api/visitors/admin/all
 exports.getAllVisitorsAdmin = async (req, res) => {
     try {
@@ -205,7 +206,7 @@ exports.getAllVisitorsAdmin = async (req, res) => {
         }
 
         // Apply the search filter
-        const visitorPopulate = { path: 'visitorId' }
+        const visitorPopulate = { path: 'visitorId', select: 'name email phone photoUrl purpose' };
         if (search && search.trim() !== 'undefined' && search.trim() !== '') {
             // Escape regex characters so things like "+91" don't crash db
             const safeSearch = search.trim().replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
@@ -253,6 +254,7 @@ exports.getAllVisitorsAdmin = async (req, res) => {
                 host: {
                     name: hostUser.name || 'Unassigned',
                 },
+                photoUrl: visitor.photoUrl,
                 visitDate: app.visitDate,
                 visitTime: app.visitTime,
                 status: app.status,

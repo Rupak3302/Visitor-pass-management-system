@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Users, UserPlus, Send, Filter, X, FileDown, Calendar, Clock } from 'lucide-react';
 import { getAllVisitorsAdmin } from '../../../services/visitorApi';
+import { getVisitorPhotoUrl } from '../../../services/imageService';
 
 
 const VisitorsManagement = () => {
@@ -192,9 +193,13 @@ const VisitorsManagement = () => {
                                 <tr key={v._id} className="hover:bg-slate-50 transition-colors">
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center font-bold text-sm">
+                                            {v.photoUrl ? (
+                                                <img src={getVisitorPhotoUrl(v.photoUrl)} alt="Avatar" className="w-10 h-10 rounded-full object-cover border border-slate-200 shadow-sm shrink-0" />
+                                            ) : (
+                                                <div className="w-10 h-10 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center font-bold text-sm">
                                                 {v.name?.charAt(0).toUpperCase()}
                                             </div>
+                                            )}
                                             <div>
                                                 <p className="text-sm font-bold text-slate-800">{v.name}</p>
                                                 <p className="text-xs font-medium text-slate-500">{v.purpose}</p>

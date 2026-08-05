@@ -16,9 +16,8 @@ exports.getAppointments = async (req, res) => {
     try {
         let filter = {};
 
-        // If the user is a Host, they can only see their own appointments
-        // If the user is an Admin, they can see all appointments
-        if (req.user.role?.toLowerCase() === 'host' || req.user.role?.toLowerCase() === 'admin' ) {
+        // Hosts can only see their own appointments; admins can see everything
+        if (req.user.role?.toLowerCase() === 'host') {
             filter.hostId = req.user._id;
         }
 
@@ -178,9 +177,8 @@ exports.updateAppointmentStatus = async (req, res) => {
 
             // Difine validity of the pass after approved to end of the day
             const validFrom = new Date();
-
             const validUntil = new Date(validFrom);
-            validUntil.setHours(23, 59, 59, 999); // Set time to 11:59:59 PM to end
+            validUntil.setHours(23, 59, 59, 999); // Set time to 11:59:59 PM of the approval day
 
             // Generate the QR code
             const qrCodeImage = await generateQRCode(passCode);

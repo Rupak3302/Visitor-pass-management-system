@@ -3,7 +3,6 @@ const Pass = require('../models/passModels');
 const Appointment = require('../models/appointmentModels');
 const Visitor = require('../models/visitorModels');
 const User = require('../models/userModels');
-const { now } = require('mongoose');
 
 
 // Scan Qr code to Check In or Check Out
@@ -13,29 +12,19 @@ exports.scanPass = async (req, res) => {
         const { qrData, passCode } = req.body;
         const securityId = req.user._id;
 
-        // Find the pass ( handle both manual entry and qr scanning entry )
+        // Find the pass (handle both manual entry and QR scanning)
         let pass;
         if (passCode) {
             const cleanPassCode = passCode.trim().toUpperCase();
             pass = await Pass.findOne({ passCode: cleanPassCode })
-            .populate('visitorId')
-            .populate('appointmentId');
-            console.log('Searching database for:', cleanPassCode);
-
-            const allPasses = await Pass.find({});
-            console.log("TOTAL PASSES MONGOOSE CAN SEE:", allPasses[0]);
-
-            pass = allPasses.find(p => p.passCode === cleanPassCode)
-            console.log('Did JAVASCRIPT find it?:', pass ? 'yes' : 'no');
-            
-        } else if (qrData)  {
+                .populate('visitorId')
+                .populate('appointmentId');
+        } else if (qrData) {
             const cleanQrData = qrData.trim().toUpperCase();
             pass = await Pass.findOne({ passCode: cleanQrData })
                 .populate('visitorId')
                 .populate('appointmentId');
         }
-
-        console.log('What mongoose found:', pass);
 
         if (!pass || !pass.visitorId || !pass.appointmentId) {
             return res.status(404).json({
@@ -49,52 +38,44 @@ exports.scanPass = async (req, res) => {
             });
         }
 
-        // Check if pass Expiration
+        // Normalize expiry state before any scan is accepted.
         const now = new Date();
+        const isExpired = now > new Date(pass.validUntil);
 
-        if (now > pass.validUntil && pass.status === 'active') {
-
-            // Kill the pass
+        if (isExpired && pass.status !== 'expired') {
             pass.isActive = false;
             pass.status = 'expired';
             await pass.save();
 
             const appId = pass.appointmentId._id || pass.appointmentId;
-            // const Appointment = require('../models/appointmentModels');
             await Appointment.findByIdAndUpdate(appId, { status: 'expired' });
+        }
 
+        if (isExpired || !pass.isActive || pass.status === 'expired' || pass.status === 'cancelled' || pass.status === 'inactive') {
             return res.status(400).json({
-                message: `Pass is Expired`
+                message: pass.status === 'expired' || isExpired
+                    ? 'This pass has expired and can no longer be used'
+                    : `This pass is currently ${pass.status} and cannot be used`
             });
         }
 
-        // check pass is already 
-        if (!pass.isActive || pass.status === 'expired' || pass.status === 'cancelled' || pass.status === 'inactive') {
-            return res.status(400).json({
-                message: `This pass is currently ${pass.status} and cannot be used`
-            });
-        }
-
-        // Check if the visitor already inside  
         const activeLog = await CheckLog.findOne({
             passId: pass._id,
             status: 'Inside'
-        });
+        }).sort({ createdAt: -1 });
 
         if (!activeLog) {
-            // First attempt Check-in
-            const newLog = await CheckLog.create({
+            await CheckLog.create({
                 passId: pass._id,
                 visitorId: pass.visitorId._id,
                 appointmentId: pass.appointmentId._id,
                 hostId: pass.hostId._id,
                 scannedBy: securityId,
                 status: 'Inside',
-                organizationName: req.user.organizationName
-
+                organizationName: req.user.organizationName,
+                checkInTime: new Date()
             });
 
-            // Mark pass active
             pass.status = 'active';
             pass.isActive = true;
             await pass.save();
@@ -104,27 +85,24 @@ exports.scanPass = async (req, res) => {
                 action: 'checked_in',
                 visitorName: pass.visitorId.name,
             });
-
-        } else {
-            // Second attempt Check-out
-            activeLog.checkOutTime = new Date();
-            activeLog.status = 'Inactive'; // log complete
-            await activeLog.save();
-
-            // Mark pass inactive/used
-            pass.status = 'inactive';
-            pass.isActive = false;
-            await pass.save();
-
-            const appId = pass.appointmentId._id || pass.appointmentId;
-            await Appointment.findByIdAndUpdate(appId, { status: 'completed' });
-
-            return res.status(200).json({
-                message: 'Check-out successful',
-                action: 'checked_out',
-                visitorName: pass.visitorId.name
-            });
         }
+
+        activeLog.checkOutTime = new Date();
+        activeLog.status = 'Inactive';
+        await activeLog.save();
+
+        pass.status = 'inactive';
+        pass.isActive = false;
+        await pass.save();
+
+        const appId = pass.appointmentId._id || pass.appointmentId;
+        await Appointment.findByIdAndUpdate(appId, { status: 'completed' });
+
+        return res.status(200).json({
+            message: 'Check-out successful',
+            action: 'checked_out',
+            visitorName: pass.visitorId.name
+        });
 
     } catch (error) {
         console.error('Error scanning pass:', error);
@@ -144,7 +122,7 @@ exports.getTodayLogs = async (req, res) => {
         const startOfSevenDaysAgo = new Date();
         startOfSevenDaysAgo.setDate(startOfSevenDaysAgo.getDate() - 6); // 6 days + today = 7 days
  
-        //Get start and end of the day
+        // Get start and end of the day
         const startOfToday = new Date();
         startOfToday.setHours(0, 0, 0, 0);
 
@@ -155,7 +133,7 @@ exports.getTodayLogs = async (req, res) => {
             }
         })
         .populate('visitorId', 'name phone photo')
-        .populate('appointmentId', 'name purpose')
+        .populate('appointmentId', 'purpose')
         .populate('hostId', 'name')
         .populate('passId', 'passCode')
         .sort({ createdAt: -1 });
@@ -207,33 +185,18 @@ exports.getAllLogsAdmin = async (req, res) => {
         .populate({
             path: 'passId',
             populate: [
-                { path: 'visitorId', select: 'name email phone' },
+                { path: 'visitorId', select: 'name email phone photoUrl' },
                 { path: 'appointmentId', populate: { path: 'hostId', select: 'name' } },
             ]
         })
         .populate('scannedBy', 'name')
         .sort({ createdAt: -1 });
 
-    // Apply Host Filter ( If spcific host selected )
-    // if (hostId && hostId !== 'All' && hostId !== 'undefined') {
-    //     logs = logs.filter(log => log.passId.appointmentId.hostId._id.toString() === hostId);
-    // }
-
     // Apply the search  (by visitor name and passcode)
     if (search && search !== 'undefined' && search.trim() !== '') {
         const safeSearch = search.trim().replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&"); // Escape special characters
         logs = logs.filter(log => log.passId.visitorId.name.toLowerCase().includes(safeSearch.toLowerCase()) || log.passId.passCode.toLowerCase().includes(safeSearch.toLowerCase()));
     }
-
-    // Unique Host Filter Dropdown
-    // const uniqueHostsMap = new Map();
-    // logs.forEach(log => {
-    //     const host = log.passId.appointmentId.hostId;
-    //     if (host && !uniqueHostsMap.has(host._id.toString())) {
-    //         uniqueHostsMap.set(host._id.toString(), { _id: host._id, name: host.name });
-    //     }
-    // }); 
-    // const hosts = Array.from(uniqueHostsMap.values());
 
     const hosts = await User.find({ role: 'host',
         organizationName: req.user.organizationName }).select('name');
@@ -247,8 +210,8 @@ exports.getAllLogsAdmin = async (req, res) => {
     const stats = {
         total: logs.length,
         today: logs.filter(log => new Date(log.checkInTime) >= todayStart).length,
-        inside: logs.filter(log => log.checkOutTime).length,
-        exited: logs.filter(log => !log.checkOutTime).length,
+        inside: logs.filter(log => log.status === 'Inside' && !log.checkOutTime).length,
+        exited: logs.filter(log => log.status === 'Inactive' && log.checkOutTime).length,
     }
 
     res.status(200).json({

@@ -37,6 +37,22 @@ router.get(
 );
 
 
+// Only Admin can view all appointments
+// GET /api/appointments/admin/all
+router.get(
+    '/admin/all',
+    protect,
+    authorizeRoles('admin'),
+    getAllAppointmentsAdmin
+);
+
+router.get(
+    '/passes/all',
+    protect,
+    authorizeRoles('admin'),
+    getAllPassesAdmin
+);
+
 // Route: GET /api/appointments/:id
 router.get(
     '/:id',
@@ -64,23 +80,8 @@ router.put(
 // );
 
 
-// Only Admin can view all appointments
-// GET /api/appointments/admin/all
-router.get(
-    '/admin/all',
-    protect,
-    authorizeRoles('admin'),
-    getAllAppointmentsAdmin
-);
-
 module.exports = router;
 
-router.get(
-    '/passes/all',
-    protect,
-    authorizeRoles('admin'),
-    getAllPassesAdmin
-)
 
 
 
